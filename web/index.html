@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticketmasta</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body>
+    <div x-data="{ logged: localStorage.getItem('access-token') }">
+        <h1>This is Ticketmasta</h1>
+        <a x-show="!logged" href="/login.html">Login</a>
+        <a x-show="logged" href="/profile.html">Profile</a>
+    </div>
+</body>
+</html>

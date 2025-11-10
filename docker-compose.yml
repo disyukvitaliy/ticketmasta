@@ -1,0 +1,52 @@
+services:
+  core:
+    build:
+      context: ./core
+      dockerfile: Dockerfile
+    command: ["flask", "run", "--host=0.0.0.0", "--debug"]
+    stop_signal: SIGINT
+    volumes:
+      - ./core:/app
+    environment:
+      FLASK_ENV: development
+  auth:
+    build:
+      context: ./auth
+      dockerfile: Dockerfile
+    command: go run auth.go
+    volumes:
+      - ./auth:/app
+    environment:
+      AUTH_JWT_SECRET: your-very-secret-key
+      GOOSE_DRIVER: postgres
+      GOOSE_DBSTRING: postgres://auth:auth@auth_db:5432/auth?sslmode=disable
+      GOOSE_MIGRATION_DIR: ./migrations
+    depends_on:
+      - auth_db
+  web:
+    image: nginx:latest
+    volumes:
+      - ./web:/usr/share/nginx/html
+  envoy:
+    image: envoyproxy/envoy:v1.36.2
+    ports:
+      - '80:8080'
+      - '9902:9902'
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml
+    depends_on:
+      - core
+      - auth
+  auth_db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: auth
+      POSTGRES_PASSWORD: auth
+      POSTGRES_DB: auth
+    ports:
+      - "5432:5432"
+    volumes:
+      - auth_db_data:/var/lib/postgresql
+
+volumes:
+  auth_db_data:

@@ -1,0 +1,120 @@
+static_resources:
+  listeners:
+    - name: listener_0
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 8080
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: ingress_http
+                access_log:
+                  - name: envoy.access_loggers.stdout
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
+                route_config:
+                  name: local_route
+                  virtual_hosts:
+                    - name: web
+                      domains: ["localhost"]
+                      typed_per_filter_config:
+                        envoy.filters.http.jwt_authn:
+                          '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
+                          disabled: true
+                      routes:
+                        - match: { prefix: "/" }
+                          route: { cluster: web_service }
+                    - name: api
+                      domains: ["api.localhost"]
+                      typed_per_filter_config:
+                        envoy.filters.http.cors:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.CorsPolicy
+                          allow_origin_string_match:
+                            - exact: "http://localhost"
+                          allow_methods: "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+                          allow_headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,Access-Control-Allow-Origin"
+                          allow_credentials: true
+                          max_age: "1728000"
+                      routes:
+                        - match: { prefix: "/core/" }
+                          route: { cluster: core_service, prefix_rewrite: "/" }
+                        - match: { prefix: "/core" }
+                          route: { cluster: core_service, prefix_rewrite: "/" }
+                        - match: { prefix: "/auth/" }
+                          route: { cluster: auth_service, prefix_rewrite: "/" }
+                        - match: { prefix: "/auth" }
+                          route: { cluster: auth_service, prefix_rewrite: "/" }
+                http_filters:
+                  - name: envoy.filters.http.cors
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+#                  https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/jwt_authn/v3/config.proto
+#                  https://github.com/envoyproxy/envoy/issues/26623
+                  - name: envoy.filters.http.jwt_authn
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
+                      providers:
+                        default_provider:
+                          local_jwks:
+                            inline_string: '{ "keys": [{ "kty": "oct", "k": "eW91ci12ZXJ5LXNlY3JldC1rZXk=" }] }'
+                          claim_to_headers:
+                            - claim_name: id
+                              header_name: x-user-id
+                            - claim_name: email
+                              header_name: x-user-email
+                            - claim_name: role
+                              header_name: x-user-role
+                      requirement_map:
+                        default_req:
+                          provider_name: default_provider
+                      rules:
+                        - match: { prefix: "/auth" }
+                        - match: { prefix: "/" }
+                          requires:
+                            provider_name: default_provider
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+  clusters:
+    - name: web_service
+      connect_timeout: 0.25s
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: web_service
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: web
+                      port_value: 80
+    - name: core_service
+      connect_timeout: 0.25s
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: core_service
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: core
+                      port_value: 5000
+    - name: auth_service
+      connect_timeout: 0.25s
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: auth_service
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: auth
+                      port_value: 3000
