@@ -21,6 +21,7 @@ services:
       GOOSE_DRIVER: postgres
       GOOSE_DBSTRING: postgres://auth:auth@auth_db:5432/auth?sslmode=disable
       GOOSE_MIGRATION_DIR: ./migrations
+      AUTH_DB_DSN: postgres://auth:auth@auth_db:5432/auth?sslmode=disable
     depends_on:
       - auth_db
   web:

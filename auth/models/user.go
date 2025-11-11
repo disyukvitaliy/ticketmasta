@@ -1,0 +1,20 @@
+package models
+
+import "time"
+
+// User represents an account in the auth service.
+// It is mapped to the existing "users" table managed by goose migrations.
+// Note: We intentionally do NOT run GORM AutoMigrate; goose owns schema changes.
+// The struct tags match columns created in 20251110125841_create_users_table.sql
+
+type User struct {
+    ID           int64     `gorm:"column:id;primaryKey;autoIncrement"`
+    Email        string    `gorm:"column:email;uniqueIndex;not null"`
+    PasswordHash string    `gorm:"column:password_hash;not null"`
+    Role         string    `gorm:"column:role;not null;default:user"`
+    CreatedAt    time.Time `gorm:"column:created_at;autoCreateTime"`
+    UpdatedAt    time.Time `gorm:"column:updated_at;autoUpdateTime"`
+}
+
+// TableName sets the table name for the User model.
+func (User) TableName() string { return "users" }
