@@ -13,6 +13,8 @@ import (
 
     dbpkg "auth/db"
     "auth/models"
+
+    "golang.org/x/crypto/bcrypt"
 )
 
 func getenv(key string, fallback ...string) string {
@@ -26,7 +28,8 @@ func getenv(key string, fallback ...string) string {
     return ""
 }
 
-var secretKey = []byte(getenv("AUTH_JWT_SECRET", "your-very-secret-key"))
+var secretKey = []byte(getenv("AUTH_JWT_SECRET"))
+
 
 // Server holds shared dependencies for handlers (to be used later as logic is added).
 type Server struct {
@@ -35,31 +38,40 @@ type Server struct {
 
 type LoginRequest struct {
     Email string `json:"email"`
+    Password string `json:"password"`
 }
 
 func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
-
     var req LoginRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
         http.Error(w, "bad json", http.StatusBadRequest)
         return
     }
-    email := req.Email
 
-    if email == "" {
+    if req.Email == "" {
         http.Error(w, "email is required", http.StatusBadRequest)
+        return
+    }
+
+    if req.Password == "" {
+        http.Error(w, "password is required", http.StatusBadRequest)
         return
     }
 
     // Look up the user by email
     var u models.User
-    err := s.DB.Gorm.Where("email = ?", email).First(&u).Error
+    err := s.DB.Gorm.Where("email = ?", req.Email).First(&u).Error
     if err != nil {
         if errors.Is(err, gorm.ErrRecordNotFound) {
             http.Error(w, "invalid credentials", http.StatusUnauthorized)
             return
         }
         http.Error(w, "db error", http.StatusInternalServerError)
+        return
+    }
+
+    if bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(req.Password)) != nil {
+        http.Error(w, "invalid credentials", http.StatusUnauthorized)
         return
     }
 

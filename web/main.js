@@ -1,15 +1,22 @@
 async function handleLogin() {
     const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
     const email = emailInput ? emailInput.value.trim() : '';
+    const password = passwordInput ? passwordInput.value : '';
+
     if (!email) {
         alert('Please enter your email');
+        return;
+    }
+    if (!password) {
+        alert('Please enter your password');
         return;
     }
 
     const res = await fetch('http://api.localhost/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email, password })
     });
 
     if (!res.ok) {
