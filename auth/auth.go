@@ -18,20 +18,6 @@ import (
     "golang.org/x/crypto/bcrypt"
 )
 
-func getenv(key string, fallback ...string) string {
-    if v := os.Getenv(key); v != "" {
-        return v
-    }
-    if len(fallback) > 0 {
-        log.Printf("%s not set; using default dev value", key)
-        return fallback[0]
-    }
-    return ""
-}
-
-var secretKey = []byte(getenv("AUTH_JWT_SECRET"))
-
-
 // Server holds shared dependencies for handlers (to be used later as logic is added).
 type Server struct {
     DB *dbpkg.DB // wrapper with underlying *gorm.DB; not used yet
@@ -92,7 +78,7 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
         "iss":   "ticketmasta-auth",
     })
 
-    tokenString, err := token.SignedString(secretKey)
+    tokenString, err := token.SignedString([]byte(os.Getenv("AUTH_JWT_SECRET")))
     if err != nil {
         http.Error(w, "could not create token", http.StatusInternalServerError)
         return
@@ -168,8 +154,7 @@ func loggingMiddleware(next http.Handler) http.Handler {
 }
 
 func main() {
-    // Initialize GORM connection (no business logic yet)
-    dsn := getenv("AUTH_DB_DSN")
+    dsn := os.Getenv("AUTH_DB_DSN")
     gdb, closer, err := dbpkg.Open(dsn)
     if err != nil {
         log.Fatalf("failed to open GORM DB: %v", err)
@@ -184,9 +169,7 @@ func main() {
     srv := &Server{DB: gdb}
 
     mux := http.NewServeMux()
-    // Login uses JSON body {"email": "..."} via POST
     mux.HandleFunc("POST /login", srv.Login)
-    // Register uses JSON body {"email":"...","password":"..."} via POST
     mux.HandleFunc("POST /register", srv.Register)
 
     loggedMux := loggingMiddleware(mux)
