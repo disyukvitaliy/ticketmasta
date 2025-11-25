@@ -7,6 +7,7 @@ import (
     "net/http"
     "os"
     "time"
+    "strings"
 
     "github.com/golang-jwt/jwt/v4"
     "gorm.io/gorm"
@@ -39,6 +40,13 @@ type Server struct {
 type LoginRequest struct {
     Email string `json:"email"`
     Password string `json:"password"`
+}
+
+type RegisterRequest struct {
+    Email    string `json:"email"`
+    Password string `json:"password"`
+    Confirm  string `json:"confirm"`
+    Terms    bool   `json:"terms"`
 }
 
 func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
@@ -95,6 +103,63 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
     _, _ = w.Write([]byte(tokenString))
 }
 
+func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
+    var req RegisterRequest
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        http.Error(w, "bad json", http.StatusBadRequest)
+        return
+    }
+
+    email := strings.TrimSpace(strings.ToLower(req.Email))
+    if email == "" {
+        http.Error(w, "email is required", http.StatusBadRequest)
+        return
+    }
+    if req.Password == "" {
+        http.Error(w, "password is required", http.StatusBadRequest)
+        return
+    }
+    if req.Confirm == "" {
+        http.Error(w, "confirm is required", http.StatusBadRequest)
+        return
+    }
+    if req.Confirm != req.Password {
+        http.Error(w, "passwords do not match", http.StatusBadRequest)
+        return
+    }
+    if !req.Terms {
+        http.Error(w, "terms must be accepted", http.StatusBadRequest)
+        return
+    }
+
+    // Hash password
+    hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+    if err != nil {
+        http.Error(w, "hash error", http.StatusInternalServerError)
+        return
+    }
+
+    u := models.User{
+        Email:        email,
+        PasswordHash: string(hash),
+        Role:         "user",
+    }
+
+    if err := s.DB.Gorm.Create(&u).Error; err != nil {
+        // Use GORM's sentinel error for unique constraint violations
+        if errors.Is(err, gorm.ErrDuplicatedKey) {
+            http.Error(w, "email already exists", http.StatusConflict)
+            return
+        }
+        http.Error(w, "db error", http.StatusInternalServerError)
+        return
+    }
+
+    w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+    w.WriteHeader(http.StatusCreated)
+    _, _ = w.Write([]byte("ok"))
+}
+
 func loggingMiddleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.URL)
@@ -121,6 +186,8 @@ func main() {
     mux := http.NewServeMux()
     // Login uses JSON body {"email": "..."} via POST
     mux.HandleFunc("POST /login", srv.Login)
+    // Register uses JSON body {"email":"...","password":"..."} via POST
+    mux.HandleFunc("POST /register", srv.Register)
 
     loggedMux := loggingMiddleware(mux)
 

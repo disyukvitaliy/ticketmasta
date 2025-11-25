@@ -44,13 +44,48 @@ async function getProfile() {
     let profile = await result.text()
     document.getElementById('profile').innerText = profile
 }
-// Attach submit handler for the login form to use handleLogin()
+
+// Registration handler: validate fields and call auth service
+async function handleRegister() {
+    const email = (document.getElementById('reg-email') || {}).value || '';
+    const password = (document.getElementById('reg-password') || {}).value || '';
+    const confirm = (document.getElementById('reg-password-confirm') || {}).value || '';
+    const terms = (document.getElementById('reg-terms') || {}).checked || false;
+
+    try {
+        const res = await fetch('http://api.localhost/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, confirm, terms })
+        });
+
+        const msg = await res.text();
+        if (res.status === 201) {
+            alert('Registration successful. Please login.');
+            window.location.href = '/login.html';
+            return;
+        }
+        alert('Registration failed: ' + (msg || res.status));
+    } catch (e) {
+        alert('Registration error: ' + e);
+    }
+}
+
+// Attach submit handlers for login/register forms
 document.addEventListener('DOMContentLoaded', () => {
-  const form = document.getElementById('login-form');
-  if (form) {
-    form.addEventListener('submit', (e) => {
+  const loginForm = document.getElementById('login-form');
+  if (loginForm) {
+    loginForm.addEventListener('submit', (e) => {
       e.preventDefault();
       handleLogin();
+    });
+  }
+
+  const registerForm = document.getElementById('register-form');
+  if (registerForm) {
+    registerForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleRegister();
     });
   }
 });

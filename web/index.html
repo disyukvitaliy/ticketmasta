@@ -10,6 +10,7 @@
     <div x-data="{ logged: localStorage.getItem('access-token') }">
         <h1>This is Ticketmasta</h1>
         <a x-show="!logged" href="/login.html">Login</a>
+        <a x-show="!logged" href="/register.html">Register</a>
         <a x-show="logged" href="/profile.html">Profile</a>
     </div>
 </body>

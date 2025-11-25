@@ -29,7 +29,7 @@ func Open(dsn string) (*DB, func() error, error) {
 		},
 	)
 
-	gdb, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: newLogger})
+	gdb, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: newLogger, TranslateError: true})
 	if err != nil {
 		return nil, nil, err
 	}
