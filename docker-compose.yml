@@ -26,10 +26,13 @@ services:
       - auth_db
   web:
     image: nginx:latest
+    environment:
+      NGINX_ENTRYPOINT_QUIET_LOGS: 1
     volumes:
       - ./web:/usr/share/nginx/html
   envoy:
     image: envoyproxy/envoy:v1.36.2
+    command: ["envoy", "-c", "/etc/envoy/envoy.yaml", "-l", "warn"]
     ports:
       - '80:8080'
       - '9902:9902'

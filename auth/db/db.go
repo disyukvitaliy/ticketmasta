@@ -20,12 +20,13 @@ type DB struct {
 func Open(dsn string) (*DB, func() error, error) {
 	// Configure a lightweight logger for dev.
 	newLogger := logger.New(
-		log.New(os.Stdout, "gorm: ", log.LstdFlags),
+		log.New(os.Stdout, "gorm: ", log.LstdFlags|log.Lmsgprefix),
 		logger.Config{
 			SlowThreshold:             200 * time.Millisecond,
 			LogLevel:                  logger.Info, // verbose debug for local development
 			IgnoreRecordNotFoundError: true,
 			ParameterizedQueries:      true,
+			Colorful:                  true,
 		},
 	)
 
