@@ -4,8 +4,6 @@ import "time"
 
 // User represents an account in the auth service.
 // It is mapped to the existing "users" table managed by goose migrations.
-// Note: We intentionally do NOT run GORM AutoMigrate; goose owns schema changes.
-// The struct tags match columns created in 20251110125841_create_users_table.sql
 
 type User struct {
     ID           int64     `gorm:"column:id;primaryKey;autoIncrement"`
