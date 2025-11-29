@@ -3,11 +3,13 @@ package main
 import (
     "encoding/json"
     "errors"
+    "fmt"
     "log"
     "net/http"
     "os"
     "time"
     "strings"
+    "context"
 
     "github.com/golang-jwt/jwt/v4"
     "gorm.io/gorm"
@@ -146,9 +148,25 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
     _, _ = w.Write([]byte("ok"))
 }
 
+func requestIDMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        rid := r.Header.Get("X-Request-ID")
+        if rid == "" {
+            rid = fmt.Sprintf("%d", time.Now().UnixNano())
+        }
+        // set header for response so downstream/upstream can see it
+        w.Header().Set("X-Request-ID", rid)
+        // put into context
+        ctx := context.WithValue(r.Context(), "request_id", rid)
+        r = r.WithContext(ctx)
+        next.ServeHTTP(w, r)
+    })
+}
+
 func loggingMiddleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.URL)
+        rid, _ := r.Context().Value("request_id").(string)
+        log.Printf("req_id=%s %s %s", rid, r.Method, r.URL)
         next.ServeHTTP(w, r)
     })
 }
@@ -172,10 +190,10 @@ func main() {
     mux.HandleFunc("POST /login", srv.Login)
     mux.HandleFunc("POST /register", srv.Register)
 
-    loggedMux := loggingMiddleware(mux)
+    handler := requestIDMiddleware(loggingMiddleware(mux))
 
     log.Println("Starting server on :3000")
-    if err := http.ListenAndServe(":3000", loggedMux); err != nil {
+    if err := http.ListenAndServe(":3000", handler); err != nil {
         log.Fatalf("http server error: %v", err)
     }
 }
