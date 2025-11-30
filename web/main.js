@@ -25,14 +25,18 @@ async function handleLogin() {
         return;
     }
 
-    const token = await res.text();
-    localStorage.setItem('access-token', token);
+    const raw = await res.text(); // expected format: "token|refreshToken"
+    const [accessToken, refreshToken] = raw.split('|');
+
+    localStorage.setItem('access-token', accessToken);
+    localStorage.setItem('refresh-token', refreshToken);
     window.location.href = "/profile.html";
 }
 
 async function handleLogout() {
-    localStorage.removeItem('access-token')
-    window.location.href = "/"
+    localStorage.removeItem('access-token');
+    localStorage.removeItem('refresh-token');
+    window.location.href = "/";
 }
 
 async function getProfile() {

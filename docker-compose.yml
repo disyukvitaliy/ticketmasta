@@ -13,7 +13,7 @@ services:
     build:
       context: ./auth
       dockerfile: Dockerfile
-    command: go run auth.go
+    command: go run .
     volumes:
       - ./auth:/app
     environment:

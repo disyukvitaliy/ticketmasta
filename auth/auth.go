@@ -7,11 +7,11 @@ import (
     "log"
     "net/http"
     "os"
+    "io"
     "time"
     "strings"
     "context"
 
-    "github.com/golang-jwt/jwt/v4"
     "gorm.io/gorm"
 
     dbpkg "auth/db"
@@ -37,6 +37,42 @@ type RegisterRequest struct {
     Terms    bool   `json:"terms"`
 }
 
+func (s *Server) Refresh(w http.ResponseWriter, r *http.Request) {
+    refreshTokenString, err := io.ReadAll(r.Body)
+    if err != nil {
+        http.Error(w, "could not read body", http.StatusBadRequest)
+        return
+    }
+
+    refreshTokenHash := hashToken(string(refreshTokenString))
+
+    var refreshToken models.RefreshToken
+    err = s.DB.Gorm.
+        Preload("User").
+        Where("revoked_at IS NULL").
+        Where("expires_at > NOW()").
+        Where("token_hash = ?", refreshTokenHash).
+        Take(&refreshToken).Error
+
+    if err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            http.Error(w, "invalid credentials", http.StatusUnauthorized)
+            return
+        }
+        http.Error(w, "db error", http.StatusInternalServerError)
+        return
+    }
+
+    tokenString, err := generateJWT(refreshToken.User)
+    if err != nil {
+        http.Error(w, "could not create token", http.StatusInternalServerError)
+        return
+    }
+
+    w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+    _, _ = w.Write([]byte(tokenString))
+}
+
 func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
     var req LoginRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -56,7 +92,7 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 
     // Look up the user by email
     var u models.User
-    err := s.DB.Gorm.Where("email = ?", req.Email).First(&u).Error
+    err := s.DB.Gorm.Where("email = ?", req.Email).Take(&u).Error
     if err != nil {
         if errors.Is(err, gorm.ErrRecordNotFound) {
             http.Error(w, "invalid credentials", http.StatusUnauthorized)
@@ -71,24 +107,27 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    // Issue JWT using user fields
-    token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-        "id":    u.ID,
-        "email": u.Email,
-        "role":  u.Role,
-        "exp":   time.Now().Add(time.Hour).Unix(),
-        "iss":   "ticketmasta-auth",
-    })
-
-    tokenString, err := token.SignedString([]byte(os.Getenv("AUTH_JWT_SECRET")))
+    tokenString, err := generateJWT(&u)
     if err != nil {
+        http.Error(w, "could not create token", http.StatusInternalServerError)
+        return
+    }
+
+    refreshTokenString, refreshTokenHash := generateToken()
+    refreshToken := models.RefreshToken{
+        UserID: u.ID,
+        TokenHash: refreshTokenHash,
+        ExpiresAt: time.Now().Add(7 * 24 * time.Hour),
+    }
+
+    if err := s.DB.Gorm.Create(&refreshToken).Error; err != nil {
         http.Error(w, "could not create token", http.StatusInternalServerError)
         return
     }
 
     // For backward-compat with the current frontend, return plain text token
     w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-    _, _ = w.Write([]byte(tokenString))
+    _, _ = w.Write([]byte(tokenString + "|" + refreshTokenString))
 }
 
 func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
@@ -189,6 +228,7 @@ func main() {
     mux := http.NewServeMux()
     mux.HandleFunc("POST /login", srv.Login)
     mux.HandleFunc("POST /register", srv.Register)
+    mux.HandleFunc("POST /refresh", srv.Refresh)
 
     handler := requestIDMiddleware(loggingMiddleware(mux))
 
