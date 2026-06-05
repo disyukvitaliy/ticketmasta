@@ -39,14 +39,53 @@ async function handleLogout() {
     window.location.href = "/";
 }
 
+async function refreshAccessToken() {
+    const refreshToken = localStorage.getItem('refresh-token');
+    if (!refreshToken) {
+        return false;
+    }
+
+    const res = await fetch('http://api.localhost/auth/refresh', {
+        method: 'POST',
+        body: refreshToken
+    });
+
+    if (!res.ok) {
+        localStorage.removeItem('access-token');
+        localStorage.removeItem('refresh-token');
+        window.location.href = "/login.html";
+        return false;
+    }
+
+    localStorage.setItem('access-token', await res.text());
+    return true;
+}
+
+async function apiFetch(path, options = {}) {
+    const headers = new Headers(options.headers || {});
+    headers.set('Authorization', `Bearer ${localStorage.getItem('access-token')}`);
+
+    let result = await fetch(`http://api.localhost${path}`, {
+        ...options,
+        headers
+    });
+
+    if (result.status !== 401 || !await refreshAccessToken()) {
+        return result;
+    }
+
+    headers.set('Authorization', `Bearer ${localStorage.getItem('access-token')}`);
+    return fetch(`http://api.localhost${path}`, {
+        ...options,
+        headers
+    });
+}
+
 async function getProfile() {
-    let result = await fetch('http://api.localhost/core/profile', {
-        headers: {
-            "Authorization": `Bearer ${localStorage.getItem('access-token')}`,
-        }
-    })
-    let profile = await result.text()
-    document.getElementById('profile').innerText = profile
+    let result = await apiFetch('/core/profile');
+
+    let profile = await result.text();
+    document.getElementById('profile').innerText = profile;
 }
 
 // Registration handler: validate fields and call auth service

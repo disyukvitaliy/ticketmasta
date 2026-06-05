@@ -24,6 +24,11 @@ static_resources:
                         envoy.filters.http.jwt_authn:
                           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
                           disabled: true
+                      response_headers_to_add:
+                        - header: # To prevent caching of static assets.
+                            key: Cache-Control
+                            value: "no-store"
+                          append_action: OVERWRITE_IF_EXISTS_OR_ADD
                       routes:
                         - match: { prefix: "/" }
                           route: { cluster: web_service }

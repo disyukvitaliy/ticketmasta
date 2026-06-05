@@ -17,7 +17,7 @@ func generateJWT(u *models.User) (string, error) {
 		"id":    u.ID,
 		"email": u.Email,
 		"role":  u.Role,
-		"exp":   time.Now().Add(time.Hour).Unix(),
+		"exp":   time.Now().Add(1 * time.Minute).Unix(),
 		"iss":   "ticketmasta-auth",
 	})
 
