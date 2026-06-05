@@ -206,6 +206,15 @@ func loggingMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+func newHandler(srv *Server) http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /login", srv.Login)
+	mux.HandleFunc("POST /register", srv.Register)
+	mux.HandleFunc("POST /refresh", srv.Refresh)
+
+	return requestIDMiddleware(loggingMiddleware(mux))
+}
+
 func main() {
 	dsn := os.Getenv("AUTH_DB_DSN")
 	gdb, closer, err := dbpkg.Open(dsn)
@@ -221,15 +230,8 @@ func main() {
 
 	srv := &Server{DB: gdb}
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /login", srv.Login)
-	mux.HandleFunc("POST /register", srv.Register)
-	mux.HandleFunc("POST /refresh", srv.Refresh)
-
-	handler := requestIDMiddleware(loggingMiddleware(mux))
-
 	log.Println("Starting server on :3000")
-	if err := http.ListenAndServe(":3000", handler); err != nil {
+	if err := http.ListenAndServe(":3000", newHandler(srv)); err != nil {
 		log.Fatalf("http server error: %v", err)
 	}
 }

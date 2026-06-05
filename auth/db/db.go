@@ -18,12 +18,17 @@ type DB struct {
 // Open initializes a GORM connection to Postgres using the provided DSN.
 // It returns a wrapper DB, a closer to be called on shutdown, and an error if connection fails.
 func Open(dsn string) (*DB, func() error, error) {
+	logLevel := logger.Info
+	if os.Getenv("LOG_LEVEL") == "silent" {
+		logLevel = logger.Silent
+	}
+
 	// Configure a lightweight logger for dev.
 	newLogger := logger.New(
 		log.New(os.Stdout, "gorm: ", log.LstdFlags|log.Lmsgprefix),
 		logger.Config{
 			SlowThreshold:             200 * time.Millisecond,
-			LogLevel:                  logger.Info, // verbose debug for local development
+			LogLevel:                  logLevel,
 			IgnoreRecordNotFoundError: true,
 			ParameterizedQueries:      true,
 			Colorful:                  true,
