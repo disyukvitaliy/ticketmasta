@@ -30,10 +30,10 @@ func generateToken() (token string, hash string) {
 
 	tokenString := base64.RawURLEncoding.EncodeToString(tokenBytes)
 
-	return tokenString, hashToken(tokenString)
+	return tokenString, hashToken([]byte(tokenString))
 }
 
-func hashToken(token string) (hash string) {
-	tokenSum := sha256.Sum256([]byte(token))
+func hashToken(token []byte) (hash string) {
+	tokenSum := sha256.Sum256(token)
 	return hex.EncodeToString(tokenSum[:])
 }

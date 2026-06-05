@@ -20,9 +20,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Server holds shared dependencies for handlers (to be used later as logic is added).
 type Server struct {
-	DB *dbpkg.DB // wrapper with underlying *gorm.DB; not used yet
+	DB *dbpkg.DB
 }
 
 type LoginRequest struct {
@@ -38,20 +37,18 @@ type RegisterRequest struct {
 }
 
 func (s *Server) Refresh(w http.ResponseWriter, r *http.Request) {
-	refreshTokenString, err := io.ReadAll(r.Body)
+	refreshTokenBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "could not read body", http.StatusBadRequest)
 		return
 	}
-
-	refreshTokenHash := hashToken(string(refreshTokenString))
 
 	var refreshToken models.RefreshToken
 	err = s.DB.Gorm.
 		Preload("User").
 		Where("revoked_at IS NULL").
 		Where("expires_at > NOW()").
-		Where("token_hash = ?", refreshTokenHash).
+		Where("token_hash = ?", hashToken(refreshTokenBytes)).
 		Take(&refreshToken).Error
 
 	if err != nil {
@@ -70,7 +67,7 @@ func (s *Server) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	_, _ = w.Write([]byte(tokenString))
+	_, _ = io.WriteString(w, tokenString)
 }
 
 func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
@@ -90,7 +87,6 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Look up the user by email
 	var u models.User
 	err := s.DB.Gorm.Where("email = ?", req.Email).Take(&u).Error
 	if err != nil {
@@ -127,7 +123,7 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 
 	// For backward-compat with the current frontend, return plain text token
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	_, _ = w.Write([]byte(tokenString + "|" + refreshTokenString))
+	_, _ = io.WriteString(w, tokenString+"|"+refreshTokenString)
 }
 
 func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
@@ -184,7 +180,7 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusCreated)
-	_, _ = w.Write([]byte("ok"))
+	_, _ = io.WriteString(w, "ok")
 }
 
 func requestIDMiddleware(next http.Handler) http.Handler {
