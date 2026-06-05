@@ -1,4 +1,4 @@
-FROM golang:1.25.4
+FROM golang:1.26.4
 WORKDIR /app
 
 # Install goose CLI in the image for running migrations from the container
