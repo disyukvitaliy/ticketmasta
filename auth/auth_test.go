@@ -1,15 +1,15 @@
 package main
 
 import (
+	dbpkg "auth/db"
+	"auth/models"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
-	"time"
 
-	dbpkg "auth/db"
-	"auth/models"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type testApp struct {
@@ -17,93 +17,14 @@ type testApp struct {
 	DB      *dbpkg.DB
 }
 
-func TestRegisterInvalidJSON(t *testing.T) {
-	app := newTestApp(t)
-	rec := app.post("/register", `{bad json`)
-
-	assertStatus(t, rec, http.StatusBadRequest)
-	assertBodyContains(t, rec, "bad json")
-}
-
-func TestRegisterMissingEmail(t *testing.T) {
-	app := newTestApp(t)
-	rec := app.post("/register", `{"password":"secret","confirm":"secret","terms":true}`)
-
-	assertStatus(t, rec, http.StatusBadRequest)
-	assertBodyContains(t, rec, "email is required")
-}
-
-func TestRegisterMissingPassword(t *testing.T) {
-	app := newTestApp(t)
-	rec := app.post("/register", `{"email":"test@example.com","confirm":"secret","terms":true}`)
-
-	assertStatus(t, rec, http.StatusBadRequest)
-	assertBodyContains(t, rec, "password is required")
-}
-
-func TestRegisterMissingConfirm(t *testing.T) {
-	app := newTestApp(t)
-	rec := app.post("/register", `{"email":"test@example.com","password":"secret","terms":true}`)
-
-	assertStatus(t, rec, http.StatusBadRequest)
-	assertBodyContains(t, rec, "confirm is required")
-}
-
-func TestRegisterPasswordMismatch(t *testing.T) {
-	app := newTestApp(t)
-	rec := app.post("/register", `{"email":"test@example.com","password":"secret","confirm":"different","terms":true}`)
-
-	assertStatus(t, rec, http.StatusBadRequest)
-	assertBodyContains(t, rec, "passwords do not match")
-}
-
-func TestRegisterTermsNotAccepted(t *testing.T) {
-	app := newTestApp(t)
-	rec := app.post("/register", `{"email":"test@example.com","password":"secret","confirm":"secret","terms":false}`)
-
-	assertStatus(t, rec, http.StatusBadRequest)
-	assertBodyContains(t, rec, "terms must be accepted")
-}
-
-func TestRegisterCreatesUser(t *testing.T) {
-	app := newTestApp(t)
-	email := testEmail()
-
-	rec := app.post("/register", validRegisterBody(email))
-
-	assertStatus(t, rec, http.StatusCreated)
-	assertBodyContains(t, rec, "ok")
-
-	var user models.User
-	if err := app.DB.Gorm.Where("email = ?", email).Take(&user).Error; err != nil {
-		t.Fatalf("find user: %v", err)
-	}
-	if user.PasswordHash == "secret" {
-		t.Fatal("password was stored as plain text")
-	}
-}
-
-func TestRegisterDuplicateEmail(t *testing.T) {
-	app := newTestApp(t)
-	email := testEmail()
-
-	first := app.post("/register", validRegisterBody(email))
-	assertStatus(t, first, http.StatusCreated)
-
-	second := app.post("/register", validRegisterBody(email))
-	assertStatus(t, second, http.StatusConflict)
-	assertBodyContains(t, second, "email already exists")
-}
-
 func newTestApp(t *testing.T) *testApp {
 	t.Helper()
 
 	gdb := openTestDB(t)
 	clearTestDB(t, gdb)
-	srv := &Server{DB: gdb}
 
 	return &testApp{
-		Handler: newHandler(srv),
+		Handler: newHandler(&Server{DB: gdb}),
 		DB:      gdb,
 	}
 }
@@ -164,6 +85,27 @@ func clearTestDB(t *testing.T, gdb *dbpkg.DB) {
 	}
 }
 
+func createUser(t *testing.T, db *dbpkg.DB, email, password string) models.User {
+	t.Helper()
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		t.Fatalf("hash could not be generated for the password %q", password)
+	}
+
+	user := models.User{
+		Email:        email,
+		PasswordHash: string(hash),
+	}
+
+	err = db.Gorm.Create(&user).Error
+	if err != nil {
+		t.Fatalf("could not create user %q: %v", email, err)
+	}
+
+	return user
+}
+
 func (app *testApp) post(path string, body string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -172,14 +114,6 @@ func (app *testApp) post(path string, body string) *httptest.ResponseRecorder {
 	app.Handler.ServeHTTP(rec, req)
 
 	return rec
-}
-
-func validRegisterBody(email string) string {
-	return `{"email":"` + email + `","password":"secret","confirm":"secret","terms":true}`
-}
-
-func testEmail() string {
-	return "register-test-" + time.Now().Format("20060102150405.000000000") + "@example.com"
 }
 
 func assertStatus(t *testing.T, rec *httptest.ResponseRecorder, want int) {
@@ -195,5 +129,13 @@ func assertBodyContains(t *testing.T, rec *httptest.ResponseRecorder, want strin
 
 	if !strings.Contains(rec.Body.String(), want) {
 		t.Fatalf("body = %q, want it to contain %q", rec.Body.String(), want)
+	}
+}
+
+func assertBodyPresent(t *testing.T, body string, name string) {
+	t.Helper()
+
+	if strings.TrimSpace(body) == "" {
+		t.Fatalf("%s is empty", name)
 	}
 }

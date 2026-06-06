@@ -67,7 +67,7 @@ func (s *Server) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	_, _ = io.WriteString(w, tokenString)
+	io.WriteString(w, tokenString)
 }
 
 func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
@@ -121,9 +121,8 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// For backward-compat with the current frontend, return plain text token
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	_, _ = io.WriteString(w, tokenString+"|"+refreshTokenString)
+	io.WriteString(w, tokenString+"|"+refreshTokenString)
 }
 
 func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
@@ -155,7 +154,6 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Hash password
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		http.Error(w, "hash error", http.StatusInternalServerError)
@@ -169,7 +167,6 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.DB.Gorm.Create(&u).Error; err != nil {
-		// Use GORM's sentinel error for unique constraint violations
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			http.Error(w, "email already exists", http.StatusConflict)
 			return
@@ -180,7 +177,7 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusCreated)
-	_, _ = io.WriteString(w, "ok")
+	io.WriteString(w, "ok")
 }
 
 func requestIDMiddleware(next http.Handler) http.Handler {
@@ -189,9 +186,7 @@ func requestIDMiddleware(next http.Handler) http.Handler {
 		if rid == "" {
 			rid = fmt.Sprintf("%d", time.Now().UnixNano())
 		}
-		// set header for response so downstream/upstream can see it
 		w.Header().Set("X-Request-ID", rid)
-		// put into context
 		ctx := context.WithValue(r.Context(), "request_id", rid)
 		r = r.WithContext(ctx)
 		next.ServeHTTP(w, r)
