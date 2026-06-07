@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -22,6 +22,16 @@ import (
 
 type Server struct {
 	DB *dbpkg.DB
+}
+
+type statusResponseWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (w *statusResponseWriter) WriteHeader(status int) {
+	w.status = status
+	w.ResponseWriter.WriteHeader(status)
 }
 
 type LoginRequest struct {
@@ -196,8 +206,11 @@ func requestIDMiddleware(next http.Handler) http.Handler {
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rid, _ := r.Context().Value("request_id").(string)
-		log.Printf("req_id=%s %s %s", rid, r.Method, r.URL)
-		next.ServeHTTP(w, r)
+		slog.Info("request started", "req_id", rid, "method", r.Method, "url", r.URL.String())
+		sw := &statusResponseWriter{ResponseWriter: w, status: http.StatusOK}
+		start := time.Now()
+		next.ServeHTTP(sw, r)
+		slog.Info("request completed", "req_id", rid, "status", sw.status, "took", time.Since(start))
 	})
 }
 
@@ -211,22 +224,19 @@ func newHandler(srv *Server) http.Handler {
 }
 
 func main() {
-	dsn := os.Getenv("AUTH_DB_DSN")
-	gdb, closer, err := dbpkg.Open(dsn)
+	configureLogger()
+
+	gdb, closer, err := dbpkg.Open(os.Getenv("AUTH_DB_DSN"))
 	if err != nil {
-		log.Fatalf("failed to open GORM DB: %v", err)
+		slog.Error("failed to open GORM DB", "err", err)
 	}
-	defer func() {
-		if err := closer(); err != nil {
-			log.Printf("db close error: %v", err)
-		}
-	}()
-	log.Println("GORM connected to Postgres successfully")
+	defer closer()
+
+	slog.Debug("GORM connected to Postgres successfully")
+	slog.Debug("Starting server on :3000")
 
 	srv := &Server{DB: gdb}
-
-	log.Println("Starting server on :3000")
 	if err := http.ListenAndServe(":3000", newHandler(srv)); err != nil {
-		log.Fatalf("http server error: %v", err)
+		slog.Error("http server error", "err", err)
 	}
 }

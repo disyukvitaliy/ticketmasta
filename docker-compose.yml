@@ -2,6 +2,7 @@ x-auth-env: &auth-env
   AUTH_JWT_SECRET: your-very-secret-key
   GOOSE_DRIVER: postgres
   GOOSE_MIGRATION_DIR: ./migrations
+  LOG_LEVEL: debug
 
 x-auth-base: &auth-base
   build:
