@@ -135,6 +135,25 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, tokenString+"|"+refreshTokenString)
 }
 
+func (s *Server) Logout(w http.ResponseWriter, r *http.Request) {
+	refreshTokenBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "could not read body", http.StatusBadRequest)
+		return
+	}
+
+	err = s.DB.Gorm.Model(&models.RefreshToken{}).
+		Where("token_hash = ?", hashToken(refreshTokenBytes)).
+		Update("revoked_at", time.Now()).Error
+
+	if err != nil {
+		http.Error(w, "could not revoke token", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -217,6 +236,7 @@ func loggingMiddleware(next http.Handler) http.Handler {
 func newHandler(srv *Server) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /login", srv.Login)
+	mux.HandleFunc("POST /logout", srv.Logout)
 	mux.HandleFunc("POST /register", srv.Register)
 	mux.HandleFunc("POST /refresh", srv.Refresh)
 

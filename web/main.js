@@ -34,6 +34,15 @@ async function handleLogin() {
 }
 
 async function handleLogout() {
+    const refreshToken = localStorage.getItem('refresh-token');
+
+    if (refreshToken) {
+        fetch('http://api.localhost/auth/logout', {
+            method: 'POST',
+            body: refreshToken
+        });
+    }
+
     localStorage.removeItem('access-token');
     localStorage.removeItem('refresh-token');
     window.location.href = "/";

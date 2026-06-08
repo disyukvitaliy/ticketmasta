@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -44,11 +45,7 @@ func openTestDB(t *testing.T) *dbpkg.DB {
 	if err != nil {
 		t.Fatalf("open db: %v", err)
 	}
-	t.Cleanup(func() {
-		if err := closer(); err != nil {
-			t.Fatalf("close db: %v", err)
-		}
-	})
+	t.Cleanup(closer)
 
 	return gdb
 }
@@ -104,6 +101,24 @@ func createUser(t *testing.T, db *dbpkg.DB, email, password string) models.User 
 	}
 
 	return user
+}
+
+func createRefreshToken(t *testing.T, app *testApp, user models.User, expiresAt time.Time, revokedAt *time.Time) (models.RefreshToken, string) {
+	t.Helper()
+
+	token, tokenHash := generateToken()
+	refreshToken := models.RefreshToken{
+		UserID:    user.ID,
+		TokenHash: tokenHash,
+		ExpiresAt: expiresAt,
+		RevokedAt: revokedAt,
+	}
+
+	if err := app.DB.Gorm.Create(&refreshToken).Error; err != nil {
+		t.Fatalf("create refresh token: %v", err)
+	}
+
+	return refreshToken, token
 }
 
 func (app *testApp) post(path string, body string) *httptest.ResponseRecorder {
