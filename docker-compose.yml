@@ -1,18 +1,3 @@
-x-auth-env: &auth-env
-  AUTH_JWT_SECRET: your-very-secret-key
-  GOOSE_DRIVER: postgres
-  GOOSE_MIGRATION_DIR: ./migrations
-  LOG_LEVEL: debug
-
-x-auth-base: &auth-base
-  build:
-    context: ./auth
-    dockerfile: Dockerfile
-  volumes:
-    - ./auth:/app
-  depends_on:
-    - auth_db
-
 services:
   core:
     build:
@@ -25,20 +10,21 @@ services:
     environment:
       FLASK_ENV: development
   auth:
-    <<: *auth-base
+    build:
+      context: ./auth
+      dockerfile: Dockerfile
     command: go run .
+    volumes:
+      - ./auth:/app
+    depends_on:
+      - auth_db
     environment:
-      <<: *auth-env
+      AUTH_JWT_SECRET: your-very-secret-key
+      GOOSE_DRIVER: postgres
+      GOOSE_MIGRATION_DIR: ./migrations
+      LOG_LEVEL: debug
       GOOSE_DBSTRING: postgres://auth:auth@auth_db:5432/auth?sslmode=disable
       AUTH_DB_DSN: postgres://auth:auth@auth_db:5432/auth?sslmode=disable
-  auth_test:
-    <<: *auth-base
-    command: go test ./...
-    environment:
-      <<: *auth-env
-      GOOSE_DBSTRING: postgres://auth:auth@auth_db:5432/auth_test?sslmode=disable
-      AUTH_DB_DSN: postgres://auth:auth@auth_db:5432/auth_test?sslmode=disable
-      LOG_LEVEL: silent
   web:
     image: nginx:latest
     environment:

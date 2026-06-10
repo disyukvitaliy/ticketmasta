@@ -1,0 +1,7 @@
+services:
+  auth:
+    command: go test ./...
+    environment:
+      GOOSE_DBSTRING: postgres://auth:auth@auth_db:5432/auth_test?sslmode=disable
+      AUTH_DB_DSN: postgres://auth:auth@auth_db:5432/auth_test?sslmode=disable
+      LOG_LEVEL: silent

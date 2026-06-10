@@ -1,8 +1,14 @@
 # TicketMasta
 
-To run the app use `docker compose up`
+To run the app use `./ape up`
 
 ## Auth app
+Run the auth app:
+
+```sh
+./ape run
+```
+
 ### Migrations
 - goose create <name_of_migration> sql
 - goose up
@@ -21,11 +27,11 @@ docker compose exec auth_db createdb -U auth auth_test
 Run auth migrations against the test database:
 
 ```sh
-docker compose run --rm auth_test goose up
+./ape run goose up
 ```
 
 Run auth tests against the test database:
 
 ```sh
-docker compose run --rm auth_test
+./ape test
 ```

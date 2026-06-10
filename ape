@@ -1,0 +1,22 @@
+#!/bin/bash
+set -e
+
+RED='\033[0;31m'
+NC='\033[0m'
+
+DC="docker compose"
+DC_QUIET="docker compose --progress quiet"
+DC_TEST="docker compose -f docker-compose.yml -f test.docker-compose.yml"
+
+case "$1" in
+  up) $DC up "${@:2}";;
+  stop) $DC stop;;
+  down) $DC down "${@:2}";;
+  ps) $DC ps;;
+  build) $DC build "${@:2}" && docker image prune -f;;
+  bash | b) $DC run --rm -it auth bash;;
+  run | r) $DC_QUIET run --rm auth "${@:2}";;
+  test | t) $DC_TEST run --rm auth "${@:2}";;
+  "") echo -e "${RED}Command wasn't passed${NC}" && exit 1;;
+  *) echo -e "${RED}There is no command {$1}${NC}" && exit 1;;
+esac
