@@ -3,6 +3,7 @@ package main
 import (
 	dbpkg "auth/db"
 	"auth/models"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -14,76 +15,60 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+var testDB *dbpkg.DB
+
 type testApp struct {
 	Handler    http.Handler
 	DB         *dbpkg.DB
 	TaskClient *fakeTaskClient
 }
 
+func TestMain(m *testing.M) {
+	dsn := os.Getenv("AUTH_DB_DSN")
+	if dsn == "" {
+		fmt.Fprintln(os.Stderr, "AUTH_DB_DSN is required")
+		os.Exit(1)
+	}
+
+	if !strings.Contains(dsn, "/auth_test?") {
+		fmt.Fprintf(os.Stderr, "AUTH_DB_DSN must point to auth_test, got %q\n", dsn)
+		os.Exit(1)
+	}
+
+	var err error
+	var closeTestDB func()
+	testDB, closeTestDB, err = dbpkg.Open(dsn)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "open db: %v\n", err)
+		os.Exit(1)
+	}
+
+	code := m.Run()
+	closeTestDB()
+	os.Exit(code)
+}
+
 func newTestApp(t *testing.T) *testApp {
 	t.Helper()
 
-	gdb := openTestDB(t)
-	clearTestDB(t, gdb)
+	tx := testDB.Gorm.Begin()
+	if tx.Error != nil {
+		t.Fatalf("begin transaction: %v", tx.Error)
+	}
 
+	t.Cleanup(func() {
+		if err := tx.Rollback().Error; err != nil {
+			t.Fatalf("rollback transaction: %v", err)
+		}
+	})
+
+	db := &dbpkg.DB{Gorm: tx}
 	taskClient := &fakeTaskClient{}
 
 	return &testApp{
-		Handler:    newHandler(&Server{DB: gdb, AsynqClient: taskClient}),
-		DB:         gdb,
+		Handler:    newHandler(&Server{DB: db, AsynqClient: taskClient}),
+		DB:         db,
 		TaskClient: taskClient,
-	}
-}
-
-func openTestDB(t *testing.T) *dbpkg.DB {
-	t.Helper()
-
-	dsn := os.Getenv("AUTH_DB_DSN")
-	if dsn == "" {
-		t.Fatal("AUTH_DB_DSN is required")
-	}
-	if !strings.Contains(dsn, "/auth_test?") {
-		t.Fatalf("AUTH_DB_DSN must point to auth_test, got %q", dsn)
-	}
-
-	gdb, closer, err := dbpkg.Open(dsn)
-	if err != nil {
-		t.Fatalf("open db: %v", err)
-	}
-	t.Cleanup(closer)
-
-	return gdb
-}
-
-func clearTestDB(t *testing.T, gdb *dbpkg.DB) {
-	t.Helper()
-
-	rows, err := gdb.Gorm.Raw(`
-		SELECT quote_ident(schemaname) || '.' || quote_ident(tablename)
-		FROM pg_tables
-		WHERE schemaname = 'public'
-			AND tablename <> 'goose_db_version'
-		ORDER BY tablename
-	`).Rows()
-	if err != nil {
-		t.Fatalf("list tables: %v", err)
-	}
-	defer rows.Close()
-
-	var tables []string
-	for rows.Next() {
-		var table string
-		if err := rows.Scan(&table); err != nil {
-			t.Fatalf("scan table: %v", err)
-		}
-		tables = append(tables, table)
-	}
-
-	if len(tables) == 0 {
-		return
-	}
-	if err := gdb.Gorm.Exec("TRUNCATE " + strings.Join(tables, ", ") + " RESTART IDENTITY CASCADE").Error; err != nil {
-		t.Fatalf("clear test db: %v", err)
 	}
 }
 
