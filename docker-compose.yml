@@ -18,13 +18,27 @@ services:
       - ./auth:/app
     depends_on:
       - auth_db
+      - redis
     environment:
       AUTH_JWT_SECRET: your-very-secret-key
+      AUTH_REDIS_ADDR: redis:6379
       GOOSE_DRIVER: postgres
       GOOSE_MIGRATION_DIR: ./migrations
       LOG_LEVEL: debug
       GOOSE_DBSTRING: postgres://auth:auth@auth_db:5432/auth?sslmode=disable
       AUTH_DB_DSN: postgres://auth:auth@auth_db:5432/auth?sslmode=disable
+  auth_worker:
+    build:
+      context: ./auth
+      dockerfile: Dockerfile
+    command: go run ./cmd/worker
+    volumes:
+      - ./auth:/app
+    depends_on:
+      - redis
+    environment:
+      AUTH_REDIS_ADDR: redis:6379
+      LOG_LEVEL: debug
   web:
     image: nginx:latest
     environment:
@@ -52,6 +66,10 @@ services:
       - "5432:5432"
     volumes:
       - auth_db_data:/var/lib/postgresql
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
 
 volumes:
   auth_db_data:

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"auth/logging"
+	"auth/tasks"
 	"context"
 	"encoding/json"
 	"errors"
@@ -12,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hibiken/asynq"
 	"gorm.io/gorm"
 
 	dbpkg "auth/db"
@@ -20,8 +23,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type TaskClient interface {
+	Enqueue(task *asynq.Task, opts ...asynq.Option) (*asynq.TaskInfo, error)
+}
+
 type Server struct {
-	DB *dbpkg.DB
+	DB          *dbpkg.DB
+	AsynqClient TaskClient
 }
 
 type statusResponseWriter struct {
@@ -204,6 +212,14 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	info, err := s.AsynqClient.Enqueue(tasks.NewConfirmEmailTask(u.Email))
+	logger := logging.LoggerFromContext(r.Context())
+	if err != nil {
+		logger.Error("could not enqueue task", "error", err)
+	} else {
+		logger.Info("enqueued task", "id", info.ID, "queue", info.Queue)
+	}
+
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusCreated)
 	io.WriteString(w, "ok")
@@ -225,11 +241,13 @@ func requestIDMiddleware(next http.Handler) http.Handler {
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rid, _ := r.Context().Value("request_id").(string)
-		slog.Info("request started", "req_id", rid, "method", r.Method, "url", r.URL.String())
+		logger := slog.Default().With("req_id", rid)
 		sw := &statusResponseWriter{ResponseWriter: w, status: http.StatusOK}
+		ctx := logging.WithLogger(r.Context(), logger)
+		logger.Info("request started", "method", r.Method, "url", r.URL.String())
 		start := time.Now()
-		next.ServeHTTP(sw, r)
-		slog.Info("request completed", "req_id", rid, "status", sw.status, "took", time.Since(start))
+		next.ServeHTTP(sw, r.WithContext(ctx))
+		logger.Info("request completed", "status", sw.status, "took", time.Since(start))
 	})
 }
 
@@ -244,7 +262,10 @@ func newHandler(srv *Server) http.Handler {
 }
 
 func main() {
-	configureLogger()
+	logging.Configure()
+
+	asynqClient := asynq.NewClient(asynq.RedisClientOpt{Addr: os.Getenv("AUTH_REDIS_ADDR")})
+	defer asynqClient.Close()
 
 	gdb, closer, err := dbpkg.Open(os.Getenv("AUTH_DB_DSN"))
 	if err != nil {
@@ -255,7 +276,7 @@ func main() {
 	slog.Debug("GORM connected to Postgres successfully")
 	slog.Debug("Starting server on :3000")
 
-	srv := &Server{DB: gdb}
+	srv := &Server{DB: gdb, AsynqClient: asynqClient}
 	if err := http.ListenAndServe(":3000", newHandler(srv)); err != nil {
 		slog.Error("http server error", "err", err)
 	}

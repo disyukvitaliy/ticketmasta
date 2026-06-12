@@ -71,6 +71,9 @@ func TestRegisterCreatesUser(t *testing.T) {
 	if user.PasswordHash == "secret" {
 		t.Fatal("password was stored as plain text")
 	}
+	if len(app.TaskClient.tasks) == 0 {
+		t.Fatal("task was not enqueued")
+	}
 }
 
 func TestRegisterDuplicateEmail(t *testing.T) {

@@ -6,21 +6,11 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"log/slog"
 	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 )
-
-func configureLogger() {
-	level := slog.LevelInfo
-	if os.Getenv("LOG_LEVEL") == "debug" {
-		level = slog.LevelDebug
-	}
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level}))
-	slog.SetDefault(logger)
-}
 
 func generateJWT(u *models.User) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{

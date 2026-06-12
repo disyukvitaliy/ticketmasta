@@ -10,12 +10,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hibiken/asynq"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type testApp struct {
-	Handler http.Handler
-	DB      *dbpkg.DB
+	Handler    http.Handler
+	DB         *dbpkg.DB
+	TaskClient *fakeTaskClient
 }
 
 func newTestApp(t *testing.T) *testApp {
@@ -24,9 +26,12 @@ func newTestApp(t *testing.T) *testApp {
 	gdb := openTestDB(t)
 	clearTestDB(t, gdb)
 
+	taskClient := &fakeTaskClient{}
+
 	return &testApp{
-		Handler: newHandler(&Server{DB: gdb}),
-		DB:      gdb,
+		Handler:    newHandler(&Server{DB: gdb, AsynqClient: taskClient}),
+		DB:         gdb,
+		TaskClient: taskClient,
 	}
 }
 
@@ -80,6 +85,18 @@ func clearTestDB(t *testing.T, gdb *dbpkg.DB) {
 	if err := gdb.Gorm.Exec("TRUNCATE " + strings.Join(tables, ", ") + " RESTART IDENTITY CASCADE").Error; err != nil {
 		t.Fatalf("clear test db: %v", err)
 	}
+}
+
+type fakeTaskClient struct {
+	tasks []*asynq.Task
+}
+
+func (tc *fakeTaskClient) Enqueue(task *asynq.Task, opts ...asynq.Option) (*asynq.TaskInfo, error) {
+	tc.tasks = append(tc.tasks, task)
+	return &asynq.TaskInfo{
+		ID:    "test-task-id",
+		Queue: "default",
+	}, nil
 }
 
 func createUser(t *testing.T, db *dbpkg.DB, email, password string) models.User {
