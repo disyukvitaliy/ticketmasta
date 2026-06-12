@@ -16,7 +16,7 @@ case "$1" in
   build) $DC build "${@:2}" && docker image prune -f;;
   bash | b) $DC run --rm -it auth bash;;
   run | r) $DC_QUIET run --rm auth "${@:2}";;
-  test | t) $DC_TEST run --rm auth "${@:2}";;
+  test | t) $DC_TEST run --rm auth go test ./...;;
   "") echo -e "${RED}Command wasn't passed${NC}" && exit 1;;
   *) echo -e "${RED}There is no command {$1}${NC}" && exit 1;;
 esac
