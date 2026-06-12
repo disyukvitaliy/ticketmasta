@@ -65,7 +65,7 @@ func TestRegisterCreatesUser(t *testing.T) {
 	assertBodyContains(t, rec, "ok")
 
 	var user models.User
-	if err := app.DB.Gorm.Where("email = ?", email).Take(&user).Error; err != nil {
+	if err := app.DB.Where("email = ?", email).Take(&user).Error; err != nil {
 		t.Fatalf("find user: %v", err)
 	}
 	if user.PasswordHash == "secret" {

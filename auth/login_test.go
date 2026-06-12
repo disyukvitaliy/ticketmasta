@@ -41,7 +41,7 @@ func TestLoginSuccess(t *testing.T) {
 	_, refreshTokenString := loginTokens(t, rec.Body.String())
 
 	var refreshTokens []models.RefreshToken
-	if err := app.DB.Gorm.Where("user_id = ?", user.ID).Find(&refreshTokens).Error; err != nil {
+	if err := app.DB.Where("user_id = ?", user.ID).Find(&refreshTokens).Error; err != nil {
 		t.Fatalf("find refresh tokens: %v", err)
 	}
 	if len(refreshTokens) != 1 {

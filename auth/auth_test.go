@@ -13,13 +13,14 @@ import (
 
 	"github.com/hibiken/asynq"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
-var testDB *dbpkg.DB
+var testDB *gorm.DB
 
 type testApp struct {
 	Handler    http.Handler
-	DB         *dbpkg.DB
+	DB         *gorm.DB
 	TaskClient *fakeTaskClient
 }
 
@@ -51,7 +52,7 @@ func TestMain(m *testing.M) {
 func newTestApp(t *testing.T) *testApp {
 	t.Helper()
 
-	tx := testDB.Gorm.Begin()
+	tx := testDB.Begin()
 	if tx.Error != nil {
 		t.Fatalf("begin transaction: %v", tx.Error)
 	}
@@ -62,12 +63,11 @@ func newTestApp(t *testing.T) *testApp {
 		}
 	})
 
-	db := &dbpkg.DB{Gorm: tx}
 	taskClient := &fakeTaskClient{}
 
 	return &testApp{
-		Handler:    newHandler(&Server{DB: db, AsynqClient: taskClient}),
-		DB:         db,
+		Handler:    newHandler(&Server{DB: tx, AsynqClient: taskClient}),
+		DB:         tx,
 		TaskClient: taskClient,
 	}
 }
@@ -84,7 +84,7 @@ func (tc *fakeTaskClient) Enqueue(task *asynq.Task, opts ...asynq.Option) (*asyn
 	}, nil
 }
 
-func createUser(t *testing.T, db *dbpkg.DB, email, password string) models.User {
+func createUser(t *testing.T, db *gorm.DB, email, password string) models.User {
 	t.Helper()
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -97,7 +97,7 @@ func createUser(t *testing.T, db *dbpkg.DB, email, password string) models.User 
 		PasswordHash: string(hash),
 	}
 
-	err = db.Gorm.Create(&user).Error
+	err = db.Create(&user).Error
 	if err != nil {
 		t.Fatalf("could not create user %q: %v", email, err)
 	}
@@ -116,7 +116,7 @@ func createRefreshToken(t *testing.T, app *testApp, user models.User, expiresAt 
 		RevokedAt: revokedAt,
 	}
 
-	if err := app.DB.Gorm.Create(&refreshToken).Error; err != nil {
+	if err := app.DB.Create(&refreshToken).Error; err != nil {
 		t.Fatalf("create refresh token: %v", err)
 	}
 

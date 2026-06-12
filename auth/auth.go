@@ -28,7 +28,7 @@ type TaskClient interface {
 }
 
 type Server struct {
-	DB          *dbpkg.DB
+	DB          *gorm.DB
 	AsynqClient TaskClient
 }
 
@@ -62,7 +62,7 @@ func (s *Server) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var refreshToken models.RefreshToken
-	err = s.DB.Gorm.
+	err = s.DB.
 		Preload("User").
 		Where("revoked_at IS NULL").
 		Where("expires_at > NOW()").
@@ -106,7 +106,7 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var u models.User
-	err := s.DB.Gorm.Where("email = ?", req.Email).Take(&u).Error
+	err := s.DB.Where("email = ?", req.Email).Take(&u).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			http.Error(w, "invalid credentials", http.StatusUnauthorized)
@@ -134,7 +134,7 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 		ExpiresAt: time.Now().Add(7 * 24 * time.Hour),
 	}
 
-	if err := s.DB.Gorm.Create(&refreshToken).Error; err != nil {
+	if err := s.DB.Create(&refreshToken).Error; err != nil {
 		http.Error(w, "could not create token", http.StatusInternalServerError)
 		return
 	}
@@ -150,7 +150,7 @@ func (s *Server) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.DB.Gorm.Model(&models.RefreshToken{}).
+	err = s.DB.Model(&models.RefreshToken{}).
 		Where("token_hash = ?", hashToken(refreshTokenBytes)).
 		Update("revoked_at", time.Now()).Error
 
@@ -203,7 +203,7 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 		Role:         "user",
 	}
 
-	if err := s.DB.Gorm.Create(&u).Error; err != nil {
+	if err := s.DB.Create(&u).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			http.Error(w, "email already exists", http.StatusConflict)
 			return

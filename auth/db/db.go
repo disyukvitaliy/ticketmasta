@@ -11,14 +11,9 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-// DB is a thin wrapper around *gorm.DB so we can evolve internals without touching handlers.
-type DB struct {
-	Gorm *gorm.DB
-}
-
 // Open initializes a GORM connection to Postgres using the provided DSN.
-// It returns a wrapper DB, a closer to be called on shutdown, and an error if connection fails.
-func Open(dsn string) (*DB, func(), error) {
+// It returns a GORM DB, a closer to be called on shutdown, and an error if connection fails.
+func Open(dsn string) (*gorm.DB, func(), error) {
 	logLevel := logger.Info
 	if os.Getenv("LOG_LEVEL") == "silent" {
 		logLevel = logger.Silent
@@ -56,5 +51,5 @@ func Open(dsn string) (*DB, func(), error) {
 		}
 	}
 
-	return &DB{Gorm: gdb}, closer, nil
+	return gdb, closer, nil
 }

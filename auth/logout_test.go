@@ -17,7 +17,7 @@ func TestLogoutSuccess(t *testing.T) {
 	assertStatus(t, rec, http.StatusNoContent)
 
 	var savedRefreshToken models.RefreshToken
-	if err := app.DB.Gorm.Take(&savedRefreshToken, refreshTokenRow.ID).Error; err != nil {
+	if err := app.DB.Take(&savedRefreshToken, refreshTokenRow.ID).Error; err != nil {
 		t.Fatalf("find refresh token: %v", err)
 	}
 	if savedRefreshToken.RevokedAt == nil {
@@ -35,7 +35,7 @@ func TestLogoutUnknownToken(t *testing.T) {
 	assertStatus(t, rec, http.StatusNoContent)
 
 	var savedRefreshToken models.RefreshToken
-	if err := app.DB.Gorm.Take(&savedRefreshToken, refreshTokenRow.ID).Error; err != nil {
+	if err := app.DB.Take(&savedRefreshToken, refreshTokenRow.ID).Error; err != nil {
 		t.Fatalf("find refresh token: %v", err)
 	}
 	if savedRefreshToken.RevokedAt != nil {
