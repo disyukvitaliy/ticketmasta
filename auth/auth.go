@@ -270,6 +270,7 @@ func main() {
 	gdb, closer, err := dbpkg.Open(os.Getenv("AUTH_DB_DSN"))
 	if err != nil {
 		slog.Error("failed to open GORM DB", "err", err)
+		os.Exit(1)
 	}
 	defer closer()
 
