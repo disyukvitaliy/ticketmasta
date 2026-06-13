@@ -38,6 +38,8 @@ services:
       - redis
     environment:
       AUTH_REDIS_ADDR: redis:6379
+      AUTH_SMTP_HOST: mailpit
+      AUTH_SMTP_PORT: 1025
       LOG_LEVEL: debug
   web:
     image: nginx:latest
@@ -70,6 +72,11 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "8025:8025" # web UI
+      - "1025:1025" # SMTP
 
 volumes:
   auth_db_data:

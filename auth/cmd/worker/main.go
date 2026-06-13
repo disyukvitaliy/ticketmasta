@@ -40,6 +40,12 @@ func taskLoggerMiddleware(next asynq.Handler) asynq.Handler {
 		logger := slog.Default().With("task_id", taskID)
 		logger.Info("task started", "task_type", t.Type())
 
-		return next.ProcessTask(logging.WithLogger(ctx, logger), t)
+		if err := next.ProcessTask(logging.WithLogger(ctx, logger), t); err != nil {
+			logger.Error("task failed", "error", err)
+			return err
+		}
+
+		logger.Info("task finished")
+		return nil
 	})
 }
