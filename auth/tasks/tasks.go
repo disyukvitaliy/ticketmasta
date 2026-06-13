@@ -3,12 +3,16 @@ package tasks
 import (
 	"auth/logging"
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/hibiken/asynq"
+	"github.com/redis/go-redis/v9"
 	"github.com/wneessen/go-mail"
 )
 
@@ -20,10 +24,23 @@ func NewConfirmEmailTask(email string) *asynq.Task {
 	return asynq.NewTask(ConfirmEmailTask, []byte(email))
 }
 
-func HandleConfirmEmailTask(ctx context.Context, t *asynq.Task) error {
+type TaskHandler struct {
+	Redis *redis.Client
+}
+
+func (h *TaskHandler) HandleConfirmEmail(ctx context.Context, t *asynq.Task) error {
 	email := string(t.Payload())
 
-	msg, err := buildConfirmEmailMsg(email)
+	token, err := generateToken()
+	if err != nil {
+		return err
+	}
+
+	if err := h.Redis.Set(ctx, "confirm:"+token, email, 24*time.Hour).Err(); err != nil {
+		return err
+	}
+
+	msg, err := buildConfirmEmailMsg(email, token)
 	if err != nil {
 		return err
 	}
@@ -41,7 +58,7 @@ func HandleConfirmEmailTask(ctx context.Context, t *asynq.Task) error {
 	return nil
 }
 
-func buildConfirmEmailMsg(email string) (*mail.Msg, error) {
+func buildConfirmEmailMsg(email, token string) (*mail.Msg, error) {
 	msg := mail.NewMsg()
 	if err := msg.From("no-reply@example.com"); err != nil {
 		return nil, err
@@ -50,7 +67,7 @@ func buildConfirmEmailMsg(email string) (*mail.Msg, error) {
 		return nil, err
 	}
 	msg.Subject("Confirm your email")
-	msg.SetBodyString(mail.TypeTextPlain, "Click here to confirm your email: http://localhost/confirm?token=")
+	msg.SetBodyString(mail.TypeTextPlain, "Click here to confirm your email: http://localhost/confirm?token="+token)
 	return msg, nil
 }
 
@@ -70,4 +87,14 @@ func newMailClient() (*mail.Client, error) {
 		mail.WithPort(port),
 		mail.WithTLSPolicy(mail.TLSOpportunistic),
 	)
+}
+
+func generateToken() (string, error) {
+	tokenBytes := make([]byte, 32)
+
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return "", err
+	}
+
+	return base64.RawURLEncoding.EncodeToString(tokenBytes), nil
 }

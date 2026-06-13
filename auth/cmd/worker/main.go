@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/hibiken/asynq"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -25,9 +26,19 @@ func main() {
 		},
 	)
 
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: os.Getenv("AUTH_REDIS_ADDR"),
+	})
+
+	defer redisClient.Close()
+
+	taskHandler := tasks.TaskHandler{
+		Redis: redisClient,
+	}
+
 	mux := asynq.NewServeMux()
 	mux.Use(taskLoggerMiddleware)
-	mux.HandleFunc(tasks.ConfirmEmailTask, tasks.HandleConfirmEmailTask)
+	mux.HandleFunc(tasks.ConfirmEmailTask, taskHandler.HandleConfirmEmail)
 
 	if err := srv.Run(mux); err != nil {
 		slog.Error("could not run server", "error", err)
