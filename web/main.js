@@ -123,6 +123,41 @@ async function handleRegister() {
     }
 }
 
+async function handleConfirmEmail() {
+    const status = document.getElementById('confirm-status');
+    const loginLink = document.getElementById('confirm-login-link');
+    const token = new URLSearchParams(window.location.search).get('token');
+
+    if (!status) {
+        return;
+    }
+
+    if (!token) {
+        status.innerText = 'Confirmation token is missing.';
+        return;
+    }
+
+    try {
+        const res = await fetch('http://api.localhost/auth/confirm', {
+            method: 'POST',
+            body: token
+        });
+
+        const msg = await res.text();
+        if (!res.ok) {
+            status.innerText = 'Confirmation failed: ' + (msg || res.status);
+            return;
+        }
+
+        status.innerText = msg || 'Email confirmed.';
+        if (loginLink) {
+            loginLink.hidden = false;
+        }
+    } catch (e) {
+        status.innerText = 'Confirmation error: ' + e;
+    }
+}
+
 // Attach submit handlers for login/register forms
 document.addEventListener('DOMContentLoaded', () => {
   const loginForm = document.getElementById('login-form');
@@ -139,5 +174,9 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       handleRegister();
     });
+  }
+
+  if (document.getElementById('confirm-status')) {
+    handleConfirmEmail();
   }
 });
