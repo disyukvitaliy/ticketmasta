@@ -97,6 +97,32 @@ async function getProfile() {
     document.getElementById('profile').innerText = profile;
 }
 
+async function getEvents() {
+    const status = document.getElementById('events-status');
+    const list = document.getElementById('events');
+    const result = await apiFetch('/core/events');
+
+    if (!result.ok) {
+        status.innerText = `Could not load events: ${result.status}`;
+        return;
+    }
+
+    const events = await result.json();
+
+    if (events.length === 0) {
+        status.innerText = 'No events are available.';
+        return;
+    }
+
+    status.hidden = true;
+
+    for (const event of events) {
+        const item = document.createElement('li');
+        item.innerText = event.name;
+        list.appendChild(item);
+    }
+}
+
 // Registration handler: validate fields and call auth service
 async function handleRegister() {
     const email = (document.getElementById('reg-email') || {}).value || '';
@@ -178,5 +204,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (document.getElementById('confirm-status')) {
     handleConfirmEmail();
+  }
+
+  if (document.getElementById('events')) {
+    getEvents();
   }
 });
