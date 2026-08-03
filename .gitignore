@@ -1,4 +1,5 @@
 /.junie/
 /.idea/
 .editorconfig
+__pycache__/
 AGENTS.md
