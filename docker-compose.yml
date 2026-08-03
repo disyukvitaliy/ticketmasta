@@ -9,6 +9,9 @@ services:
       - ./core:/app
     environment:
       FLASK_ENV: development
+      CORE_DB_DSN: postgresql+psycopg://core:core@core_db:5432/core
+    depends_on:
+      - core_db
   auth:
     build:
       context: ./auth
@@ -68,6 +71,14 @@ services:
       - "5432:5432"
     volumes:
       - auth_db_data:/var/lib/postgresql
+  core_db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: core
+      POSTGRES_PASSWORD: core
+      POSTGRES_DB: core
+    volumes:
+      - core_db_data:/var/lib/postgresql
   redis:
     image: redis:7-alpine
     command: ["redis-server", "--save", "", "--appendonly", "no"]
@@ -81,3 +92,4 @@ services:
 
 volumes:
   auth_db_data:
+  core_db_data:
