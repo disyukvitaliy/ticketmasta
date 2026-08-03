@@ -13,9 +13,23 @@ case "$1" in
   down) $DC down "${@:2}";;
   ps) $DC ps;;
   build) $DC build "${@:2}" && docker image prune -f;;
-  bash | b) $DC run --rm -it auth bash;;
-  run | r) $DC --progress quiet run --rm auth "${@:2}";;
-  test | t) $DC_TEST run --rm auth go test ./...;;
+  auth)
+    case "$2" in
+      bash | b) $DC run --rm -it auth bash;;
+      run | r) $DC --progress quiet run --rm auth "${@:3}";;
+      test | t) $DC_TEST run --rm auth go test ./...;;
+      "") echo -e "${RED}Auth command wasn't passed${NC}" && exit 1;;
+      *) echo -e "${RED}There is no auth command {$2}${NC}" && exit 1;;
+    esac
+    ;;
+  core)
+    case "$2" in
+      bash | b) $DC run --rm -it core bash;;
+      run | r) $DC --progress quiet run --rm core "${@:3}";;
+      "") echo -e "${RED}Core command wasn't passed${NC}" && exit 1;;
+      *) echo -e "${RED}There is no core command {$2}${NC}" && exit 1;;
+    esac
+    ;;
   "") echo -e "${RED}Command wasn't passed${NC}" && exit 1;;
   *) echo -e "${RED}There is no command {$1}${NC}" && exit 1;;
 esac

@@ -6,7 +6,7 @@ To run the app use `./ape up`
 Run the auth app:
 
 ```sh
-./ape run
+./ape auth run
 ```
 
 ### Migrations
@@ -27,11 +27,11 @@ docker compose exec auth_db createdb -U auth auth_test
 Run auth migrations against the test database:
 
 ```sh
-./ape run goose up
+./ape auth run goose up
 ```
 
 Run auth tests against the test database:
 
 ```sh
-./ape test
+./ape auth test
 ```
