@@ -1,7 +1,7 @@
-from flask import Flask, request, make_response
+from flask import Flask, make_response, request
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session
 from sqlalchemy import String, ForeignKey, create_engine, select
-import os, sys
+import os
 
 class Base(DeclarativeBase):
     pass
@@ -21,20 +21,8 @@ engine = create_engine(os.environ["CORE_DB_DSN"])
 
 app = Flask(__name__)
 
-@app.route('/')
-def main_page():
-    # return 'Main page'
-    print(request.environ)
-    sys.stdout.flush()
-    headers = {key: value for key, value in request.headers.items()}
-    return f'Headers: {headers}'
-
-@app.route('/home')
-def home_page():
-    return 'Home page'
-
 @app.route('/profile')
-def profile_page():
+def profile():
     headers_to_include = ['X-User-Id', 'X-User-Email', 'X-User-Role']  # Adjust headers as needed
     headers_text = "\n".join(
         f"{header}: {request.headers.get(header, 'Not Provided')}"
