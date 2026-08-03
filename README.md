@@ -35,3 +35,31 @@ Run auth tests against the test database:
 ```sh
 ./ape auth test
 ```
+
+## Core app
+
+Run the core app:
+
+```sh
+./ape core run
+```
+
+Open a shell in the core container:
+
+```sh
+./ape core bash
+```
+
+### Migrations
+
+Create a migration:
+
+```sh
+./ape core run alembic revision -m "create venues"
+```
+
+Apply migrations:
+
+```sh
+./ape core run alembic upgrade head
+```
