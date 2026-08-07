@@ -100,27 +100,45 @@ async function getProfile() {
 async function getEvents() {
     const status = document.getElementById('events-status');
     const list = document.getElementById('events');
-    const result = await apiFetch('/core/events');
+    const pagination = document.getElementById('events-pagination');
+    const previous = document.getElementById('events-previous');
+    const next = document.getElementById('events-next');
+    let currentPage = 1;
 
-    if (!result.ok) {
-        status.innerText = `Could not load events: ${result.status}`;
-        return;
+    async function loadEvents() {
+        const result = await apiFetch(`/core/events?page=${currentPage}`);
+
+        if (!result.ok) {
+            status.innerText = `Could not load events: ${result.status}`;
+            return;
+        }
+
+        const events = await result.json();
+
+        list.replaceChildren();
+
+        for (const event of events) {
+            const item = document.createElement('li');
+            item.innerText = `${event.name} — ${event.venue.name}`;
+            list.appendChild(item);
+        }
+
+        status.hidden = events.length > 0;
+        pagination.hidden = false;
+        previous.disabled = currentPage === 1;
     }
 
-    const events = await result.json();
+    previous.addEventListener('click', () => {
+        currentPage -= 1;
+        loadEvents();
+    });
 
-    if (events.length === 0) {
-        status.innerText = 'No events are available.';
-        return;
-    }
+    next.addEventListener('click', () => {
+        currentPage += 1;
+        loadEvents();
+    });
 
-    status.hidden = true;
-
-    for (const event of events) {
-        const item = document.createElement('li');
-        item.innerText = event.name;
-        list.appendChild(item);
-    }
+    loadEvents();
 }
 
 // Registration handler: validate fields and call auth service
