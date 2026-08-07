@@ -23,6 +23,7 @@ def upgrade() -> None:
         'events',
         sa.Column('id', sa.Integer, primary_key=True),
         sa.Column('name', sa.String(255), nullable=False),
+        sa.Column('starts_at', sa.DateTime(), nullable=False),
         sa.Column('venue_id', sa.Integer, sa.ForeignKey('venues.id'), nullable=False)
     )
 
