@@ -77,6 +77,8 @@ services:
       POSTGRES_USER: core
       POSTGRES_PASSWORD: core
       POSTGRES_DB: core
+    ports:
+      - "5433:5432"
     volumes:
       - core_db_data:/var/lib/postgresql
   redis:

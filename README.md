@@ -63,3 +63,9 @@ Apply migrations:
 ```sh
 ./ape core run alembic upgrade head
 ```
+
+Roll back the last migration:
+
+```sh
+./ape core run alembic downgrade -1
+```
