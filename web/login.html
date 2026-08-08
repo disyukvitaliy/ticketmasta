@@ -4,21 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ticketmasta</title>
-    <script src="/main.js"></script>
+    <script defer src="/main.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body>
+<body x-data="loginPage()">
+    <main>
     <h1>Login</h1>
-    <form id="login-form">
+    <form @submit.prevent="submit">
         <label for="email">Email</label><br>
-        <input id="email" type="email" placeholder="you@example.com" autocomplete="email" required />
+        <input id="email" type="email" placeholder="you@example.com" autocomplete="email" x-model="email" required>
         <br>
         <label for="password">Password</label><br>
-        <input id="password" type="password" autocomplete="current-password" required />
+        <input id="password" type="password" autocomplete="current-password" x-model="password" required>
         <br>
         <button type="submit">Login</button>
     </form>
+    <p x-show="error" x-text="error"></p>
     <p>
         <a href="/">Back</a>
     </p>
+    </main>
 </body>
 </html>

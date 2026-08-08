@@ -4,28 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ticketmasta</title>
-    <script src="/main.js"></script>
+    <script defer src="/main.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body>
+<body x-data="registerPage()">
+    <main>
     <h1>Register</h1>
-    <form id="register-form">
+    <form @submit.prevent="submit">
         <label for="reg-email">Email</label><br>
-        <input id="reg-email" type="email" placeholder="you@example.com" autocomplete="email" required />
+        <input id="reg-email" type="email" placeholder="you@example.com" autocomplete="email" x-model="email" required>
         <br>
         <label for="reg-password">Password</label><br>
-        <input id="reg-password" type="password" autocomplete="new-password" required />
+        <input id="reg-password" type="password" autocomplete="new-password" x-model="password" required>
         <br>
         <label for="reg-password-confirm">Confirm Password</label><br>
-        <input id="reg-password-confirm" type="password" autocomplete="new-password" required />
+        <input id="reg-password-confirm" type="password" autocomplete="new-password" x-model="confirm" required>
         <br>
         <label for="reg-terms">
-            <input id="reg-terms" type="checkbox" required /> I accept the terms
+            <input id="reg-terms" type="checkbox" x-model="terms" required> I accept the terms
         </label>
         <br>
         <button type="submit">Register</button>
     </form>
+    <p x-show="error" x-text="error"></p>
     <p>
-        <a href="/login.html">Already have an account? Login</a>
+        <a href="/login">Already have an account? Login</a>
     </p>
+    </main>
 </body>
 </html>

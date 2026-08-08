@@ -4,12 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ticketmasta</title>
-    <script src="/main.js"></script>
+    <script defer src="/main.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body onload="getProfile()">
+<body x-data="profilePage()" x-init="load()">
+    <main>
     <h1>This is your Ticketmasta profile</h1>
     <a href="/">Back</a><br>
-    <button onclick="handleLogout()">Logout</button>
-    <div id="profile"></div>
+    <button @click="logout">Logout</button>
+    <p x-show="error" x-text="error"></p>
+    <div x-text="profile"></div>
+    </main>
 </body>
 </html>

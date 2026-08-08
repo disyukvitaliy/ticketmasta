@@ -4,16 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ticketmasta</title>
-    <script src="/main.js"></script>
+    <script defer src="/main.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body>
+<body x-data="confirmPage()" x-init="confirm()">
+    <main>
     <h1>Confirm email</h1>
-    <p id="confirm-status">Confirming your email...</p>
-    <p id="confirm-login-link" hidden>
-        <a href="/login.html">Login</a>
+    <p x-text="status"></p>
+    <p x-show="confirmed">
+        <a href="/login">Login</a>
     </p>
     <p>
         <a href="/">Back</a>
     </p>
+    </main>
 </body>
 </html>

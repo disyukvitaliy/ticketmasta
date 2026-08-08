@@ -1,72 +1,22 @@
-async function handleLogin() {
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
-    const email = emailInput ? emailInput.value.trim() : '';
-    const password = passwordInput ? passwordInput.value : '';
-
-    if (!email) {
-        alert('Please enter your email');
-        return;
-    }
-    if (!password) {
-        alert('Please enter your password');
-        return;
-    }
-
-    const res = await fetch('http://api.localhost/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-    });
-
-    if (!res.ok) {
-        const msg = await res.text();
-        alert('Login failed: ' + msg);
-        return;
-    }
-
-    const raw = await res.text(); // expected format: "token|refreshToken"
-    const [accessToken, refreshToken] = raw.split('|');
-
-    localStorage.setItem('access-token', accessToken);
-    localStorage.setItem('refresh-token', refreshToken);
-    window.location.href = "/profile.html";
-}
-
-async function handleLogout() {
-    const refreshToken = localStorage.getItem('refresh-token');
-
-    if (refreshToken) {
-        fetch('http://api.localhost/auth/logout', {
-            method: 'POST',
-            body: refreshToken
-        });
-    }
-
-    localStorage.removeItem('access-token');
-    localStorage.removeItem('refresh-token');
-    window.location.href = "/";
-}
-
 async function refreshAccessToken() {
     const refreshToken = localStorage.getItem('refresh-token');
     if (!refreshToken) {
         return false;
     }
 
-    const res = await fetch('http://api.localhost/auth/refresh', {
+    const result = await fetch('http://api.localhost/auth/refresh', {
         method: 'POST',
         body: refreshToken
     });
 
-    if (!res.ok) {
+    if (!result.ok) {
         localStorage.removeItem('access-token');
         localStorage.removeItem('refresh-token');
-        window.location.href = "/login.html";
+        window.location.href = '/login';
         return false;
     }
 
-    localStorage.setItem('access-token', await res.text());
+    localStorage.setItem('access-token', await result.text());
     return true;
 }
 
@@ -74,270 +24,221 @@ async function apiFetch(path, options = {}) {
     const headers = new Headers(options.headers || {});
     headers.set('Authorization', `Bearer ${localStorage.getItem('access-token')}`);
 
-    let result = await fetch(`http://api.localhost${path}`, {
-        ...options,
-        headers
-    });
+    let result = await fetch(`http://api.localhost${path}`, {...options, headers});
 
     if (result.status !== 401 || !await refreshAccessToken()) {
         return result;
     }
 
     headers.set('Authorization', `Bearer ${localStorage.getItem('access-token')}`);
-    return fetch(`http://api.localhost${path}`, {
-        ...options,
-        headers
-    });
+    return fetch(`http://api.localhost${path}`, {...options, headers});
 }
 
-async function getProfile() {
-    let result = await apiFetch('/core/profile');
-
-    let profile = await result.text();
-    document.getElementById('profile').innerText = profile;
+function homePage() {
+    return {logged: Boolean(localStorage.getItem('access-token'))};
 }
 
-async function getEvents() {
-    const status = document.getElementById('events-status');
-    const list = document.getElementById('events');
-    const pagination = document.getElementById('events-pagination');
-    const previous = document.getElementById('events-previous');
-    const next = document.getElementById('events-next');
-    let currentPage = 1;
+function loginPage() {
+    return {
+        email: '',
+        password: '',
+        error: '',
 
-    async function loadEvents() {
-        const result = await apiFetch(`/core/events?page=${currentPage}`);
+        async submit() {
+            const result = await fetch('http://api.localhost/auth/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email: this.email.trim(), password: this.password})
+            });
 
-        if (!result.ok) {
-            status.innerText = `Could not load events: ${result.status}`;
-            return;
+            if (!result.ok) {
+                this.error = `Login failed: ${await result.text()}`;
+                return;
+            }
+
+            const [accessToken, refreshToken] = (await result.text()).split('|');
+            localStorage.setItem('access-token', accessToken);
+            localStorage.setItem('refresh-token', refreshToken);
+            window.location.href = '/profile';
         }
-
-        const events = await result.json();
-
-        list.replaceChildren();
-
-        for (const event of events) {
-            const item = document.createElement('li');
-            item.innerText = `${event.name} — ${event.venue.name}`;
-            list.appendChild(item);
-        }
-
-        status.hidden = events.length > 0;
-        pagination.hidden = false;
-        previous.disabled = currentPage === 1;
-    }
-
-    previous.addEventListener('click', () => {
-        currentPage -= 1;
-        loadEvents();
-    });
-
-    next.addEventListener('click', () => {
-        currentPage += 1;
-        loadEvents();
-    });
-
-    loadEvents();
+    };
 }
 
-async function getVenues() {
-    const status = document.getElementById('venues-status');
-    const list = document.getElementById('venues');
-    const pagination = document.getElementById('venues-pagination');
-    const previous = document.getElementById('venues-previous');
-    const next = document.getElementById('venues-next');
-    let currentPage = 1;
+function registerPage() {
+    return {
+        email: '',
+        password: '',
+        confirm: '',
+        terms: false,
+        error: '',
 
-    async function loadVenues() {
-        const result = await apiFetch(`/core/venues?page=${currentPage}`);
+        async submit() {
+            const result = await fetch('http://api.localhost/auth/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    email: this.email,
+                    password: this.password,
+                    confirm: this.confirm,
+                    terms: this.terms
+                })
+            });
 
-        if (!result.ok) {
-            status.innerText = `Could not load venues: ${result.status}`;
-            return;
+            if (result.status === 201) {
+                window.location.href = '/login';
+                return;
+            }
+
+            this.error = `Registration failed: ${(await result.text()) || result.status}`;
         }
-
-        const venues = await result.json();
-        list.replaceChildren();
-
-        for (const venue of venues) {
-            const item = document.createElement('li');
-            const link = document.createElement('a');
-            link.href = `/venue.html?id=${venue.id}`;
-            link.innerText = venue.name;
-            item.appendChild(link);
-            list.appendChild(item);
-        }
-
-        status.hidden = venues.length > 0;
-        pagination.hidden = false;
-        previous.disabled = currentPage === 1;
-    }
-
-    previous.addEventListener('click', () => {
-        currentPage -= 1;
-        loadVenues();
-    });
-
-    next.addEventListener('click', () => {
-        currentPage += 1;
-        loadVenues();
-    });
-
-    loadVenues();
+    };
 }
 
-async function getVenue() {
-    const venueId = new URLSearchParams(window.location.search).get('id');
-    const title = document.getElementById('venue-name');
-    const status = document.getElementById('venue-status');
-    const list = document.getElementById('venue-events');
-    const pagination = document.getElementById('venue-events-pagination');
-    const previous = document.getElementById('venue-events-previous');
-    const next = document.getElementById('venue-events-next');
-    let currentPage = 1;
+function confirmPage() {
+    return {
+        status: 'Confirming your email...',
+        confirmed: false,
 
-    if (!venueId) {
-        status.innerText = 'Venue is missing.';
-        return;
-    }
+        async confirm() {
+            const token = new URLSearchParams(window.location.search).get('token');
+            if (!token) {
+                this.status = 'Confirmation token is missing.';
+                return;
+            }
 
-    const venueResult = await apiFetch(`/core/venues/${venueId}`);
-    if (!venueResult.ok) {
-        status.innerText = venueResult.status === 404 ? 'Venue not found.' : `Could not load venue: ${venueResult.status}`;
-        return;
-    }
+            const result = await fetch('http://api.localhost/auth/confirm', {
+                method: 'POST',
+                body: token
+            });
+            const message = await result.text();
 
-    const venue = await venueResult.json();
-    title.innerText = venue.name;
+            if (!result.ok) {
+                this.status = `Confirmation failed: ${message || result.status}`;
+                return;
+            }
 
-    async function loadEvents() {
-        const result = await apiFetch(`/core/venues/${venueId}/events?page=${currentPage}`);
-
-        if (!result.ok) {
-            status.innerText = `Could not load events: ${result.status}`;
-            return;
+            this.status = message || 'Email confirmed.';
+            this.confirmed = true;
         }
-
-        const events = await result.json();
-        list.replaceChildren();
-
-        for (const event of events) {
-            const item = document.createElement('li');
-            item.innerText = event.name;
-            list.appendChild(item);
-        }
-
-        status.hidden = events.length > 0;
-        pagination.hidden = false;
-        previous.disabled = currentPage === 1;
-    }
-
-    previous.addEventListener('click', () => {
-        currentPage -= 1;
-        loadEvents();
-    });
-
-    next.addEventListener('click', () => {
-        currentPage += 1;
-        loadEvents();
-    });
-
-    loadEvents();
+    };
 }
 
-// Registration handler: validate fields and call auth service
-async function handleRegister() {
-    const email = (document.getElementById('reg-email') || {}).value || '';
-    const password = (document.getElementById('reg-password') || {}).value || '';
-    const confirm = (document.getElementById('reg-password-confirm') || {}).value || '';
-    const terms = (document.getElementById('reg-terms') || {}).checked || false;
+function profilePage() {
+    return {
+        profile: '',
+        error: '',
 
-    try {
-        const res = await fetch('http://api.localhost/auth/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password, confirm, terms })
-        });
+        async load() {
+            const result = await apiFetch('/core/profile');
+            if (!result.ok) {
+                this.error = `Could not load profile: ${result.status}`;
+                return;
+            }
 
-        const msg = await res.text();
-        if (res.status === 201) {
-            alert('Registration successful. Please login.');
-            window.location.href = '/login.html';
-            return;
+            this.profile = await result.text();
+        },
+
+        async logout() {
+            const refreshToken = localStorage.getItem('refresh-token');
+            if (refreshToken) {
+                await fetch('http://api.localhost/auth/logout', {
+                    method: 'POST',
+                    body: refreshToken
+                });
+            }
+
+            localStorage.removeItem('access-token');
+            localStorage.removeItem('refresh-token');
+            window.location.href = '/';
         }
-        alert('Registration failed: ' + (msg || res.status));
-    } catch (e) {
-        alert('Registration error: ' + e);
-    }
+    };
 }
 
-async function handleConfirmEmail() {
-    const status = document.getElementById('confirm-status');
-    const loginLink = document.getElementById('confirm-login-link');
-    const token = new URLSearchParams(window.location.search).get('token');
-
-    if (!status) {
-        return;
-    }
-
-    if (!token) {
-        status.innerText = 'Confirmation token is missing.';
-        return;
-    }
-
-    try {
-        const res = await fetch('http://api.localhost/auth/confirm', {
-            method: 'POST',
-            body: token
-        });
-
-        const msg = await res.text();
-        if (!res.ok) {
-            status.innerText = 'Confirmation failed: ' + (msg || res.status);
-            return;
-        }
-
-        status.innerText = msg || 'Email confirmed.';
-        if (loginLink) {
-            loginLink.hidden = false;
-        }
-    } catch (e) {
-        status.innerText = 'Confirmation error: ' + e;
-    }
+function eventsPage() {
+    return cataloguePage('/core/events', event => `${event.name} — ${event.venue.name}`);
 }
 
-// Attach submit handlers for login/register forms
-document.addEventListener('DOMContentLoaded', () => {
-  const loginForm = document.getElementById('login-form');
-  if (loginForm) {
-    loginForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      handleLogin();
-    });
-  }
+function venuesPage() {
+    return {
+        ...cataloguePage('/core/venues'),
+        venues: [],
 
-  const registerForm = document.getElementById('register-form');
-  if (registerForm) {
-    registerForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      handleRegister();
-    });
-  }
+        async load() {
+            const result = await apiFetch(`/core/venues?page=${this.page}`);
+            if (!result.ok) {
+                this.status = `Could not load venues: ${result.status}`;
+                return;
+            }
 
-  if (document.getElementById('confirm-status')) {
-    handleConfirmEmail();
-  }
+            this.venues = await result.json();
+            this.status = this.venues.length ? '' : 'No venues are available.';
+        }
+    };
+}
 
-  if (document.getElementById('events')) {
-    getEvents();
-  }
+function venuePage() {
+    return {
+        ...cataloguePage('', event => event.name),
+        venue: null,
+        venueId: null,
 
-  if (document.getElementById('venues')) {
-    getVenues();
-  }
+        async init() {
+            const match = window.location.pathname.match(/^\/venues\/(\d+)$/);
+            if (!match) {
+                this.status = 'Venue is missing.';
+                return;
+            }
 
-  if (document.getElementById('venue-name')) {
-    getVenue();
-  }
-});
+            this.venueId = match[1];
+            const result = await apiFetch(`/core/venues/${this.venueId}`);
+            if (!result.ok) {
+                this.status = result.status === 404 ? 'Venue not found.' : `Could not load venue: ${result.status}`;
+                return;
+            }
+
+            this.venue = await result.json();
+            await this.load();
+        },
+
+        async load() {
+            const result = await apiFetch(`/core/venues/${this.venueId}/events?page=${this.page}`);
+            if (!result.ok) {
+                this.status = `Could not load events: ${result.status}`;
+                return;
+            }
+
+            this.items = await result.json();
+            this.status = this.items.length ? '' : 'No upcoming events are available.';
+        }
+    };
+}
+
+function cataloguePage(path, itemLabel) {
+    return {
+        items: [],
+        page: 1,
+        status: 'Loading...',
+        itemLabel,
+
+        async load() {
+            const result = await apiFetch(`${path}?page=${this.page}`);
+            if (!result.ok) {
+                this.status = `Could not load items: ${result.status}`;
+                return;
+            }
+
+            this.items = await result.json();
+            this.status = this.items.length ? '' : 'No items are available.';
+        },
+
+        previous() {
+            this.page -= 1;
+            this.load();
+        },
+
+        next() {
+            this.page += 1;
+            this.load();
+        }
+    };
+}

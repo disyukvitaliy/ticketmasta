@@ -5,18 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Venue | Ticketmasta</title>
     <script defer src="/main.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body>
-    <h1 id="venue-name">Venue</h1>
+<body x-data="venuePage()" x-init="init()">
+    <main>
+    <h1 x-text="venue ? venue.name : 'Venue'"></h1>
     <h2>Events</h2>
-    <p id="venue-status">Loading venue...</p>
-    <ul id="venue-events"></ul>
-    <nav id="venue-events-pagination" aria-label="Venue events pagination" hidden>
-        <button id="venue-events-previous" type="button">Back</button>
-        <button id="venue-events-next" type="button">Forward</button>
+    <p x-show="status" x-text="status"></p>
+    <ul>
+        <template x-for="event in items" :key="event.id">
+            <li x-text="itemLabel(event)"></li>
+        </template>
+    </ul>
+    <nav aria-label="Venue events pagination" x-show="venue">
+        <button type="button" @click="previous()" :disabled="page === 1">Back</button>
+        <button type="button" @click="next()">Forward</button>
     </nav>
     <p>
-        <a href="/venues.html">Back to venues</a>
+        <a href="/venues">Back to venues</a>
     </p>
+    </main>
 </body>
 </html>
