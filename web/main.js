@@ -141,6 +141,111 @@ async function getEvents() {
     loadEvents();
 }
 
+async function getVenues() {
+    const status = document.getElementById('venues-status');
+    const list = document.getElementById('venues');
+    const pagination = document.getElementById('venues-pagination');
+    const previous = document.getElementById('venues-previous');
+    const next = document.getElementById('venues-next');
+    let currentPage = 1;
+
+    async function loadVenues() {
+        const result = await apiFetch(`/core/venues?page=${currentPage}`);
+
+        if (!result.ok) {
+            status.innerText = `Could not load venues: ${result.status}`;
+            return;
+        }
+
+        const venues = await result.json();
+        list.replaceChildren();
+
+        for (const venue of venues) {
+            const item = document.createElement('li');
+            const link = document.createElement('a');
+            link.href = `/venue.html?id=${venue.id}`;
+            link.innerText = venue.name;
+            item.appendChild(link);
+            list.appendChild(item);
+        }
+
+        status.hidden = venues.length > 0;
+        pagination.hidden = false;
+        previous.disabled = currentPage === 1;
+    }
+
+    previous.addEventListener('click', () => {
+        currentPage -= 1;
+        loadVenues();
+    });
+
+    next.addEventListener('click', () => {
+        currentPage += 1;
+        loadVenues();
+    });
+
+    loadVenues();
+}
+
+async function getVenue() {
+    const venueId = new URLSearchParams(window.location.search).get('id');
+    const title = document.getElementById('venue-name');
+    const status = document.getElementById('venue-status');
+    const list = document.getElementById('venue-events');
+    const pagination = document.getElementById('venue-events-pagination');
+    const previous = document.getElementById('venue-events-previous');
+    const next = document.getElementById('venue-events-next');
+    let currentPage = 1;
+
+    if (!venueId) {
+        status.innerText = 'Venue is missing.';
+        return;
+    }
+
+    const venueResult = await apiFetch(`/core/venues/${venueId}`);
+    if (!venueResult.ok) {
+        status.innerText = venueResult.status === 404 ? 'Venue not found.' : `Could not load venue: ${venueResult.status}`;
+        return;
+    }
+
+    const venue = await venueResult.json();
+    title.innerText = venue.name;
+
+    async function loadEvents() {
+        const result = await apiFetch(`/core/venues/${venueId}/events?page=${currentPage}`);
+
+        if (!result.ok) {
+            status.innerText = `Could not load events: ${result.status}`;
+            return;
+        }
+
+        const events = await result.json();
+        list.replaceChildren();
+
+        for (const event of events) {
+            const item = document.createElement('li');
+            item.innerText = event.name;
+            list.appendChild(item);
+        }
+
+        status.hidden = events.length > 0;
+        pagination.hidden = false;
+        previous.disabled = currentPage === 1;
+    }
+
+    previous.addEventListener('click', () => {
+        currentPage -= 1;
+        loadEvents();
+    });
+
+    next.addEventListener('click', () => {
+        currentPage += 1;
+        loadEvents();
+    });
+
+    loadEvents();
+}
+
 // Registration handler: validate fields and call auth service
 async function handleRegister() {
     const email = (document.getElementById('reg-email') || {}).value || '';
@@ -226,5 +331,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (document.getElementById('events')) {
     getEvents();
+  }
+
+  if (document.getElementById('venues')) {
+    getVenues();
+  }
+
+  if (document.getElementById('venue-name')) {
+    getVenue();
   }
 });
