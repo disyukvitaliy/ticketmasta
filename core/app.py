@@ -35,8 +35,33 @@ def profile():
     response.mimetype = "text/plain"
     return response, 200
 
+@app.route('/venues')
+def list_venues():
+    page = request.args.get('page', default=1, type=int)
+    with Session(engine) as session:
+        select_stmt = (
+            select(Venue)
+            .order_by(Venue.name)
+            .offset((page - 1) * 10)
+            .limit(10)
+        )
+        venues = session.scalars(select_stmt).all()
+
+    return [{'id': venue.id, 'name': venue.name} for venue in venues]
+
+@app.route('/venues/<int:venue_id>')
+def get_venue(venue_id):
+    with Session(engine) as session:
+        venue = session.get(Venue, venue_id)
+
+        if venue is None:
+            return {'error': 'Not found'}, 404
+
+        return {'id': venue.id, 'name': venue.name}
+
 @app.route('/events')
-def events_list():
+@app.route('/venues/<int:venue_id>/events')
+def list_events(venue_id=None):
     page = request.args.get('page', default=1, type=int)
     with Session(engine) as session:
         select_stmt = (
@@ -47,6 +72,9 @@ def events_list():
             .offset((page - 1) * 10)
             .limit(10)
         )
+
+        if venue_id:
+            select_stmt = select_stmt.where(Venue.id == venue_id)
 
         events = session.execute(select_stmt).all()
 
