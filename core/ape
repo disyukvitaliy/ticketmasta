@@ -9,6 +9,8 @@ DC="docker compose"
 case "$1" in
   bash | b) $DC run --rm -it core bash;;
   run | r) $DC --progress quiet run --rm core "${@:2}";;
+  lint | l) $DC --progress quiet run --rm core ruff check .;;
+  format | f) $DC --progress quiet run --rm core ruff format .;;
   "") echo -e "${RED}Core command wasn't passed${NC}" && exit 1;;
   *) echo -e "${RED}There is no core command {$1}${NC}" && exit 1;;
 esac

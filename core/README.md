@@ -7,6 +7,13 @@ Run commands from the repository root.
 ./ape core bash
 ```
 
+## Linting
+
+```sh
+./ape core lint
+./ape core format
+```
+
 ## Migrations
 
 Create a migration:
