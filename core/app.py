@@ -49,7 +49,8 @@ class TicketHold(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(), nullable=False)
 
 
-engine = create_engine(os.environ["CORE_DB_DSN"])
+primary_engine = create_engine(os.environ["CORE_DB_DSN"], logging_name="primary")
+replica_engine = create_engine(os.environ["CORE_READ_DB_DSN"], logging_name="replica")
 
 app = Flask(__name__)
 
@@ -117,7 +118,7 @@ def profile():
 @app.route("/venues")
 def list_venues():
     page = request.args.get("page", default=1, type=int)
-    with Session(engine) as session:
+    with Session(replica_engine) as session:
         select_stmt = (
             select(Venue).order_by(Venue.name).offset((page - 1) * 10).limit(10)
         )
@@ -128,7 +129,7 @@ def list_venues():
 
 @app.route("/venues/<int:venue_id>")
 def get_venue(venue_id):
-    with Session(engine) as session:
+    with Session(replica_engine) as session:
         venue = session.get(Venue, venue_id)
 
         if venue is None:
@@ -141,7 +142,7 @@ def get_venue(venue_id):
 @app.route("/venues/<int:venue_id>/events")
 def list_events(venue_id=None):
     page = request.args.get("page", default=1, type=int)
-    with Session(engine) as session:
+    with Session(replica_engine) as session:
         select_stmt = (
             select(Event, Venue)
             .join(Venue)
@@ -164,7 +165,7 @@ def list_events(venue_id=None):
 
 @app.route("/events/<int:event_id>")
 def get_event(event_id):
-    with Session(engine) as session:
+    with Session(replica_engine) as session:
         event = session.get(Event, event_id)
 
         if event is None:
@@ -175,7 +176,7 @@ def get_event(event_id):
 
 @app.route("/events/<int:event_id>/ticket-types")
 def list_ticket_types(event_id):
-    with Session(engine) as session:
+    with Session(replica_engine) as session:
         ticket_types = session.scalars(
             select(TicketType).where(TicketType.event_id == event_id)
         ).all()
@@ -193,7 +194,7 @@ def list_ticket_types(event_id):
 
 @app.route("/ticket-types/<int:ticket_type_id>")
 def get_ticket_type(ticket_type_id):
-    with Session(engine) as session:
+    with Session(primary_engine) as session:
         ticket_type = session.get(TicketType, ticket_type_id)
 
         if ticket_type is None:
@@ -215,7 +216,7 @@ def create_ticket_hold(ticket_type_id):
     if quantity is None:
         return {"error": "Quantity is required"}, 400
 
-    with Session(engine) as session:
+    with Session(primary_engine) as session:
         with session.begin():
             ticket_type = session.scalars(
                 select(TicketType)
@@ -242,7 +243,7 @@ def create_ticket_hold(ticket_type_id):
 
 @app.route("/ticket-holds/<int:ticket_hold_id>")
 def get_ticket_hold(ticket_hold_id):
-    with Session(engine) as session:
+    with Session(primary_engine) as session:
         ticket_hold = session.scalars(
             select(TicketHold).where(
                 TicketHold.id == ticket_hold_id,
@@ -264,7 +265,7 @@ def get_ticket_hold(ticket_hold_id):
 
 @app.route("/ticket-holds/<int:ticket_hold_id>/complete", methods=["POST"])
 def complete_ticket_hold(ticket_hold_id):
-    with Session(engine) as session:
+    with Session(primary_engine) as session:
         hold_id = session.execute(
             update(TicketHold)
             .where(
