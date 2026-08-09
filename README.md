@@ -9,8 +9,7 @@ To run the app use `./ape up`
 
 ## TODO
 
-1. Add logging, including request IDs.
-2. Add ticket purchasing.
-3. Add approximate ticket availability.
-4. Add a billing service for profit tracking and invoicing.
-5. Add a review and recommendation service.
+1. Add a payment flow: payment-pending holds, provider idempotency, and webhook completion or failure.
+2. Add approximate ticket availability.
+3. Add a billing service for profit tracking and invoicing.
+4. Add a review and recommendation service.
