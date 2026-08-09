@@ -213,6 +213,44 @@ function venuePage() {
     };
 }
 
+function eventPage() {
+    return {
+        event: null,
+        ticketTypes: [],
+        status: 'Loading...',
+
+        async init() {
+            const match = window.location.pathname.match(/^\/events\/(\d+)$/);
+            if (!match) {
+                this.status = 'Event is missing.';
+                return;
+            }
+
+            const eventId = match[1];
+            const eventResult = await apiFetch(`/core/events/${eventId}`);
+            if (!eventResult.ok) {
+                this.status = eventResult.status === 404 ? 'Event not found.' : `Could not load event: ${eventResult.status}`;
+                return;
+            }
+
+            this.event = await eventResult.json();
+
+            const ticketTypesResult = await apiFetch(`/core/events/${eventId}/ticket-types`);
+            if (!ticketTypesResult.ok) {
+                this.status = `Could not load ticket types: ${ticketTypesResult.status}`;
+                return;
+            }
+
+            this.ticketTypes = await ticketTypesResult.json();
+            this.status = this.ticketTypes.length ? '' : 'No ticket types are available.';
+        },
+
+        ticketTypeLabel(ticketType) {
+            return `${ticketType.name} — $${(ticketType.price_cents / 100).toFixed(2)} — ${ticketType.quantity} available`;
+        }
+    };
+}
+
 function cataloguePage(path, itemLabel) {
     return {
         items: [],

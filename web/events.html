@@ -13,7 +13,7 @@
     <p x-show="status" x-text="status"></p>
     <ul>
         <template x-for="event in items" :key="event.id">
-            <li x-text="itemLabel(event)"></li>
+            <li><a :href="`/events/${event.id}`" x-text="itemLabel(event)"></a></li>
         </template>
     </ul>
     <nav aria-label="Events pagination">

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event | Ticketmasta</title>
+    <script defer src="/main.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body x-data="eventPage()" x-init="init()">
+    <main>
+    <h1 x-text="event ? event.name : 'Event'"></h1>
+    <p x-show="status" x-text="status"></p>
+    <section x-show="event">
+        <h2>Ticket types</h2>
+        <ul>
+            <template x-for="ticketType in ticketTypes" :key="ticketType.id">
+                <li x-text="ticketTypeLabel(ticketType)"></li>
+            </template>
+        </ul>
+    </section>
+    <p>
+        <a href="/events">Back to events</a>
+    </p>
+    </main>
+</body>
+</html>
