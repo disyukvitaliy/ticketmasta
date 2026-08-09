@@ -11,6 +11,7 @@ case "$1" in
   run | r) $DC --progress quiet run --rm core "${@:2}";;
   lint | l) $DC --progress quiet run --rm core ruff check .;;
   format | f) $DC --progress quiet run --rm core ruff format .;;
+  imports | i) $DC --progress quiet run --rm core ruff check --select I --fix .;;
   "") echo -e "${RED}Core command wasn't passed${NC}" && exit 1;;
   *) echo -e "${RED}There is no core command {$1}${NC}" && exit 1;;
 esac

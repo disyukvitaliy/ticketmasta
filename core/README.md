@@ -12,6 +12,7 @@ Run commands from the repository root.
 ```sh
 ./ape core lint
 ./ape core format
+./ape core imports
 ```
 
 ## Migrations
