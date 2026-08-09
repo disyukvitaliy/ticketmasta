@@ -5,7 +5,7 @@ from time import perf_counter
 from uuid import uuid4
 
 from flask import Flask, g, has_request_context, make_response, request
-from flask.logging import default_handler
+from flask.logging import default_handler, wsgi_errors_stream
 from sqlalchemy import DateTime, ForeignKey, String, create_engine, func, select, update
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
@@ -66,11 +66,26 @@ default_handler.setFormatter(
 )
 app.logger.setLevel(logging.INFO)
 
+
+def configure_sql_logger(database):
+    handler = logging.StreamHandler(wsgi_errors_stream)
+    handler.setFormatter(
+        RequestFormatter(
+            "%(asctime)s %(levelname)s request_id=%(request_id)s "
+            f"database={database} %(message)s"
+        )
+    )
+
+    logger = logging.getLogger(f"sqlalchemy.engine.Engine.{database}")
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+
+
 if os.environ.get("CORE_ENV") == "development":
     logging.getLogger("werkzeug").setLevel(logging.WARNING)
-    sqlalchemy_logger = logging.getLogger("sqlalchemy.engine")
-    sqlalchemy_logger.addHandler(default_handler)
-    sqlalchemy_logger.setLevel(logging.INFO)
+    configure_sql_logger("primary")
+    configure_sql_logger("replica")
 
 
 @app.before_request
