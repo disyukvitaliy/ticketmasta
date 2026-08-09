@@ -1,12 +1,12 @@
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import perf_counter
 from uuid import uuid4
 
 from flask import Flask, g, has_request_context, make_response, request
 from flask.logging import default_handler
-from sqlalchemy import DateTime, ForeignKey, String, create_engine, select
+from sqlalchemy import DateTime, ForeignKey, String, create_engine, func, select, update
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 
@@ -162,7 +162,7 @@ def get_event(event_id):
         if event is None:
             return {"error": "Not found"}, 404
 
-        return {"id": event.id, "name": event.name}
+        return {"id": event.id, "name": event.name, "venue_id": event.venue_id}
 
 
 @app.route("/events/<int:event_id>/ticket-types")
@@ -181,3 +181,97 @@ def list_ticket_types(event_id):
         }
         for ticket_type in ticket_types
     ]
+
+
+@app.route("/ticket-types/<int:ticket_type_id>")
+def get_ticket_type(ticket_type_id):
+    with Session(engine) as session:
+        ticket_type = session.get(TicketType, ticket_type_id)
+
+        if ticket_type is None:
+            return {"error": "Not found"}, 404
+
+        return {
+            "id": ticket_type.id,
+            "event_id": ticket_type.event_id,
+            "name": ticket_type.name,
+            "price_cents": ticket_type.price_cents,
+            "quantity": ticket_type.quantity,
+        }
+
+
+@app.route("/ticket-types/<int:ticket_type_id>/holds", methods=["POST"])
+def create_ticket_hold(ticket_type_id):
+    quantity = request.form.get("quantity", type=int)
+
+    if quantity is None:
+        return {"error": "Quantity is required"}, 400
+
+    with Session(engine) as session:
+        with session.begin():
+            ticket_type = session.scalars(
+                select(TicketType)
+                .where(TicketType.id == ticket_type_id)
+                .with_for_update()
+            ).one()
+
+            if ticket_type.quantity >= quantity:
+                ticket_type.quantity = ticket_type.quantity - quantity
+            else:
+                return {"error": "Not enough tickets available"}, 400
+
+            ticket_hold = TicketHold(
+                ticket_type_id=ticket_type_id,
+                user_id=request.headers.get("X-User-Id", type=int),
+                status="active",
+                quantity=quantity,
+                expires_at=datetime.now() + timedelta(minutes=15),
+            )
+            session.add(ticket_hold)
+
+        return {"id": ticket_hold.id}
+
+
+@app.route("/ticket-holds/<int:ticket_hold_id>")
+def get_ticket_hold(ticket_hold_id):
+    with Session(engine) as session:
+        ticket_hold = session.scalars(
+            select(TicketHold).where(
+                TicketHold.id == ticket_hold_id,
+                TicketHold.user_id == request.headers.get("X-User-Id", type=int),
+            )
+        ).one_or_none()
+
+        if ticket_hold is None:
+            return {"error": "Not found"}, 404
+
+        return {
+            "id": ticket_hold.id,
+            "ticket_type_id": ticket_hold.ticket_type_id,
+            "status": ticket_hold.status,
+            "quantity": ticket_hold.quantity,
+            "expires_at": ticket_hold.expires_at,
+        }
+
+
+@app.route("/ticket-holds/<int:ticket_hold_id>/complete", methods=["POST"])
+def complete_ticket_hold(ticket_hold_id):
+    with Session(engine) as session:
+        hold_id = session.execute(
+            update(TicketHold)
+            .where(
+                TicketHold.id == ticket_hold_id,
+                TicketHold.user_id == request.headers.get("X-User-Id", type=int),
+                TicketHold.status == "active",
+                TicketHold.expires_at > func.now(),
+            )
+            .values(status="completed")
+            .returning(TicketHold.id)
+        ).scalar_one_or_none()
+
+        session.commit()
+
+        if hold_id is None:
+            return {"error": "Hold is unavailable"}, 400
+
+        return {"id": hold_id}
