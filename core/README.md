@@ -33,3 +33,11 @@ Roll back the last migration:
 ```sh
 ./ape core run alembic downgrade -1
 ```
+
+## Seeds
+
+Reset and seed the core database:
+
+```sh
+./ape core run python seeds.py
+```
