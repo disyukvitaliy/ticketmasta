@@ -1,7 +1,11 @@
-from flask import Flask, make_response, request
+from flask import Flask, g, has_request_context, make_response, request
+from flask.logging import default_handler
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session
 from sqlalchemy import String, DateTime, ForeignKey, create_engine, select
 from datetime import datetime
+from time import perf_counter
+from uuid import uuid4
+import logging
 import os
 
 class Base(DeclarativeBase):
@@ -22,6 +26,42 @@ class Event(Base):
 engine = create_engine(os.environ["CORE_DB_DSN"])
 
 app = Flask(__name__)
+
+
+class RequestFormatter(logging.Formatter):
+    def format(self, record):
+        record.request_id = g.get('request_id', '-') if has_request_context() else '-'
+        return super().format(record)
+
+
+default_handler.setFormatter(RequestFormatter(
+    '%(asctime)s %(levelname)s request_id=%(request_id)s %(message)s'
+))
+app.logger.setLevel(logging.INFO)
+
+if os.environ.get('CORE_ENV') == 'development':
+    logging.getLogger('werkzeug').setLevel(logging.WARNING)
+
+
+@app.before_request
+def assign_request_id():
+    g.request_id = request.headers.get('X-Request-ID') or str(uuid4())
+    g.request_started_at = perf_counter()
+
+
+@app.after_request
+def log_request(response):
+    response.headers['X-Request-ID'] = g.request_id
+    duration_ms = (perf_counter() - g.request_started_at) * 1000
+    app.logger.info(
+        'request_completed method=%s path=%s status=%s duration_ms=%.2f',
+        request.method,
+        request.path,
+        response.status_code,
+        duration_ms,
+    )
+    return response
+
 
 @app.route('/profile')
 def profile():

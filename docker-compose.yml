@@ -8,6 +8,7 @@ services:
     volumes:
       - ./core:/app
     environment:
+      CORE_ENV: development
       FLASK_ENV: development
       CORE_DB_DSN: postgresql+psycopg://core:core@core_db:5432/core
     depends_on:
