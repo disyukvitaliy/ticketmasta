@@ -1,0 +1,14 @@
+#!/bin/bash
+set -e
+
+RED='\033[0;31m'
+NC='\033[0m'
+
+DC="docker compose"
+
+case "$1" in
+  bash | b) $DC run --rm -it core bash;;
+  run | r) $DC --progress quiet run --rm core "${@:2}";;
+  "") echo -e "${RED}Core command wasn't passed${NC}" && exit 1;;
+  *) echo -e "${RED}There is no core command {$1}${NC}" && exit 1;;
+esac
