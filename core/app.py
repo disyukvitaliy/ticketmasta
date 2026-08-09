@@ -67,16 +67,24 @@ app.logger.setLevel(logging.INFO)
 
 if os.environ.get("CORE_ENV") == "development":
     logging.getLogger("werkzeug").setLevel(logging.WARNING)
+    sqlalchemy_logger = logging.getLogger("sqlalchemy.engine")
+    sqlalchemy_logger.addHandler(default_handler)
+    sqlalchemy_logger.setLevel(logging.INFO)
 
 
 @app.before_request
-def assign_request_id():
+def start_request():
     g.request_id = request.headers.get("X-Request-ID") or str(uuid4())
     g.request_started_at = perf_counter()
+    app.logger.info(
+        "request_started method=%s path=%s",
+        request.method,
+        request.path,
+    )
 
 
 @app.after_request
-def log_request(response):
+def finish_request(response):
     response.headers["X-Request-ID"] = g.request_id
     duration_ms = (perf_counter() - g.request_started_at) * 1000
     app.logger.info(
