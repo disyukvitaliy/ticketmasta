@@ -28,6 +28,27 @@ class Event(Base):
     venue_id: Mapped[int] = mapped_column(ForeignKey("venues.id"))
 
 
+class TicketType(Base):
+    __tablename__ = "ticket_types"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"))
+    name: Mapped[str] = mapped_column(String(255))
+    price_cents: Mapped[int] = mapped_column()
+    quantity: Mapped[int] = mapped_column()
+
+
+class TicketHold(Base):
+    __tablename__ = "ticket_holds"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(nullable=False)
+    ticket_type_id: Mapped[int] = mapped_column(
+        ForeignKey("ticket_types.id"), nullable=False
+    )
+    quantity: Mapped[int] = mapped_column(nullable=False)
+    status: Mapped[str] = mapped_column(String(255), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(), nullable=False)
+
+
 engine = create_engine(os.environ["CORE_DB_DSN"])
 
 app = Flask(__name__)
@@ -130,4 +151,33 @@ def list_events(venue_id=None):
     return [
         {"id": event.id, "name": event.name, "venue": {"name": venue.name}}
         for event, venue in events
+    ]
+
+
+@app.route("/events/<int:event_id>")
+def get_event(event_id):
+    with Session(engine) as session:
+        event = session.get(Event, event_id)
+
+        if event is None:
+            return {"error": "Not found"}, 404
+
+        return {"id": event.id, "name": event.name}
+
+
+@app.route("/events/<int:event_id>/ticket-types")
+def list_ticket_types(event_id):
+    with Session(engine) as session:
+        ticket_types = session.scalars(
+            select(TicketType).where(TicketType.event_id == event_id)
+        ).all()
+
+    return [
+        {
+            "id": ticket_type.id,
+            "name": ticket_type.name,
+            "price_cents": ticket_type.price_cents,
+            "quantity": ticket_type.quantity,
+        }
+        for ticket_type in ticket_types
     ]
