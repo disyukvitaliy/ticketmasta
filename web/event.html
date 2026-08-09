@@ -15,7 +15,16 @@
         <h2>Ticket types</h2>
         <ul>
             <template x-for="ticketType in ticketTypes" :key="ticketType.id">
-                <li x-text="ticketTypeLabel(ticketType)"></li>
+                <li>
+                    <span x-text="ticketTypeLabel(ticketType)"></span>
+                    <form @submit.prevent="buy(ticketType)">
+                        <label>
+                            Quantity
+                            <input type="number" step="1" x-model.number="quantities[ticketType.id]">
+                        </label>
+                        <button type="submit">Buy</button>
+                    </form>
+                </li>
             </template>
         </ul>
     </section>

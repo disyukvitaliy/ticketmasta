@@ -158,6 +158,10 @@ function eventsPage() {
     return cataloguePage('/core/events', event => `${event.name} — ${event.venue.name}`);
 }
 
+function formatPrice(priceCents) {
+    return `$${(priceCents / 100).toFixed(2)}`;
+}
+
 function venuesPage() {
     return {
         ...cataloguePage('/core/venues'),
@@ -217,6 +221,7 @@ function eventPage() {
     return {
         event: null,
         ticketTypes: [],
+        quantities: {},
         status: 'Loading...',
 
         async init() {
@@ -246,7 +251,88 @@ function eventPage() {
         },
 
         ticketTypeLabel(ticketType) {
-            return `${ticketType.name} — $${(ticketType.price_cents / 100).toFixed(2)} — ${ticketType.quantity} available`;
+            return `${ticketType.name} — ${formatPrice(ticketType.price_cents)} — ${ticketType.quantity} available`;
+        },
+
+        async buy(ticketType) {
+            const quantity = this.quantities[ticketType.id];
+            const result = await apiFetch(`/core/ticket-types/${ticketType.id}/holds`, {
+                method: 'POST',
+                body: new URLSearchParams({quantity})
+            });
+
+            if (!result.ok) {
+                this.status = `Could not reserve tickets: ${result.status}`;
+                return;
+            }
+
+            const ticketHold = await result.json();
+            window.location.href = `/ticket-holds/${ticketHold.id}`;
+        }
+    };
+}
+
+function ticketHoldPage() {
+    return {
+        ticketHold: null,
+        ticketType: null,
+        event: null,
+        venue: null,
+        status: 'Loading...',
+
+        async init() {
+            const match = window.location.pathname.match(/^\/ticket-holds\/(\d+)$/);
+            if (!match) {
+                this.status = 'Ticket hold is missing.';
+                return;
+            }
+
+            const result = await apiFetch(`/core/ticket-holds/${match[1]}`);
+            if (!result.ok) {
+                this.status = result.status === 404 ? 'Ticket hold not found.' : `Could not load ticket hold: ${result.status}`;
+                return;
+            }
+
+            this.ticketHold = await result.json();
+
+            const ticketTypeResult = await apiFetch(`/core/ticket-types/${this.ticketHold.ticket_type_id}`);
+            if (!ticketTypeResult.ok) {
+                this.status = `Could not load ticket type: ${ticketTypeResult.status}`;
+                return;
+            }
+
+            this.ticketType = await ticketTypeResult.json();
+
+            const eventResult = await apiFetch(`/core/events/${this.ticketType.event_id}`);
+            if (!eventResult.ok) {
+                this.status = `Could not load event: ${eventResult.status}`;
+                return;
+            }
+
+            this.event = await eventResult.json();
+
+            const venueResult = await apiFetch(`/core/venues/${this.event.venue_id}`);
+            if (!venueResult.ok) {
+                this.status = `Could not load venue: ${venueResult.status}`;
+                return;
+            }
+
+            this.venue = await venueResult.json();
+            this.status = '';
+        },
+
+        async complete() {
+            const result = await apiFetch(`/core/ticket-holds/${this.ticketHold.id}/complete`, {
+                method: 'POST'
+            });
+
+            if (!result.ok) {
+                this.status = `Could not complete purchase: ${result.status}`;
+                return;
+            }
+
+            this.ticketHold.status = 'completed';
+            this.status = '';
         }
     };
 }

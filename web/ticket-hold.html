@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket hold | Ticketmasta</title>
+    <script defer src="/main.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body x-data="ticketHoldPage()" x-init="init()">
+    <main>
+    <h1>Ticket hold</h1>
+    <p x-show="status" x-text="status"></p>
+    <template x-if="ticketHold && ticketType && event && venue">
+        <section>
+            <p>Event: <span x-text="event.name"></span></p>
+            <p>Venue: <span x-text="venue.name"></span></p>
+            <p>Ticket type: <span x-text="ticketType.name"></span></p>
+            <p>Price: <span x-text="formatPrice(ticketType.price_cents)"></span></p>
+            <p>Status: <span x-text="ticketHold.status"></span></p>
+            <p>Quantity: <span x-text="ticketHold.quantity"></span></p>
+            <p x-show="ticketHold.status !== 'completed'">Expires at: <span x-text="ticketHold.expires_at"></span></p>
+            <form x-show="ticketHold.status === 'active'" @submit.prevent="complete()">
+                <button type="submit">Complete purchase</button>
+            </form>
+            <p x-show="ticketHold.status === 'completed'">Purchase completed.</p>
+        </section>
+    </template>
+    <p>
+        <a href="/events">Back to events</a>
+    </p>
+    </main>
+</body>
+</html>
