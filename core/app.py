@@ -9,6 +9,8 @@ from flask.logging import default_handler, wsgi_errors_stream
 from sqlalchemy import DateTime, ForeignKey, String, create_engine, func, select, update
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
+from tasks import send_ticket_email
+
 
 class Base(DeclarativeBase):
     pass
@@ -281,7 +283,7 @@ def get_ticket_hold(ticket_hold_id):
 @app.route("/ticket-holds/<int:ticket_hold_id>/complete", methods=["POST"])
 def complete_ticket_hold(ticket_hold_id):
     with Session(primary_engine) as session:
-        hold_id = session.execute(
+        completed_hold = session.execute(
             update(TicketHold)
             .where(
                 TicketHold.id == ticket_hold_id,
@@ -290,12 +292,31 @@ def complete_ticket_hold(ticket_hold_id):
                 TicketHold.expires_at > func.now(),
             )
             .values(status="completed")
-            .returning(TicketHold.id)
-        ).scalar_one_or_none()
+            .returning(
+                TicketHold.id,
+                TicketHold.ticket_type_id,
+                TicketHold.quantity,
+            )
+        ).one_or_none()
 
-        session.commit()
-
-        if hold_id is None:
+        if completed_hold is None:
             return {"error": "Hold is unavailable"}, 400
 
-        return {"id": hold_id}
+        hold_id, ticket_type_id, quantity = completed_hold
+        session.commit()
+
+    with Session(replica_engine) as session:
+        ticket_type_name, event_name = session.execute(
+            select(TicketType.name, Event.name)
+            .join(Event)
+            .where(TicketType.id == ticket_type_id)
+        ).one()
+
+    send_ticket_email.send(
+        request.headers["X-User-Email"],
+        event_name,
+        ticket_type_name,
+        quantity,
+    )
+
+    return {"id": hold_id}

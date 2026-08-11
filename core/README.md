@@ -42,3 +42,9 @@ Reset and seed the core database:
 ```sh
 ./ape core run python seeds.py
 ```
+
+## Background jobs
+
+`core_worker` consumes Redis-backed jobs. Completing a ticket hold enqueues an
+email task, which the worker sends through Mailpit. Open Mailpit at
+http://localhost:8025.
