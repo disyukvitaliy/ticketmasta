@@ -19,6 +19,29 @@ A single conditional `UPDATE` could do the check and reduction in one query: `UP
 We use the lock-and-check flow for now because it keeps the outcomes clear: a
 missing ticket type and insufficient availability can have different responses.
 
+### Read replicas
+
+We use replicas for reads that can tolerate a short delay, and the primary
+database when a request needs the latest state to make a decision. For example,
+venue and event catalogue reads can use a replica, while ticket holds and
+purchase-related ticket-type reads use the primary database. A stale hold or
+ticket quantity could otherwise lead to the wrong purchase decision.
+
+### Log context
+
+Logs include a request ID for work performed during an HTTP request and a job
+ID for background jobs. This lets us find all log entries related to one
+request or one job, even when several services or log lines are involved.
+
+### Background jobs
+
+We use Dramatiq with Redis for email notifications. It gives us workers and
+retries without adding much infrastructure, which is a good fit for this
+project. Not every email needs the same guarantee: non-critical notifications
+can be best-effort. Ticket delivery is different: before it becomes the way a
+customer receives a ticket, it should use a durable outbox or similar pattern
+so the ticket is not lost between saving the purchase and queuing the job.
+
 ## TODO
 
 1. Add a payment flow: payment-pending holds, provider idempotency, and webhook completion or failure.
