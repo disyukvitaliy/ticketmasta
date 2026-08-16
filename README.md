@@ -42,6 +42,13 @@ can be best-effort. Ticket delivery is different: before it becomes the way a
 customer receives a ticket, it should use a durable outbox or similar pattern
 so the ticket is not lost between saving the purchase and queuing the job.
 
+### Database scale
+
+PostgreSQL is a performant starting point, but a single database is not assumed
+to handle Ticketmaster-scale traffic. At that scale, we would need a
+deliberate distributed data design, including regional distribution, rather
+than trying to scale one primary database indefinitely.
+
 ## TODO
 
 1. Add a payment flow: payment-pending holds, provider idempotency, and webhook completion or failure.
