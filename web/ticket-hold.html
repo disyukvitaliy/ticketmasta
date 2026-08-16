@@ -23,7 +23,11 @@
             <form x-show="ticketHold.status === 'active'" @submit.prevent="complete()">
                 <button type="submit">Complete purchase</button>
             </form>
+            <form x-show="ticketHold.status === 'active'" @submit.prevent="cancel()">
+                <button type="submit">Cancel hold</button>
+            </form>
             <p x-show="ticketHold.status === 'completed'">Purchase completed.</p>
+            <p x-show="ticketHold.status === 'canceled'">Hold canceled.</p>
         </section>
     </template>
     <p>

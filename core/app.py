@@ -1,11 +1,13 @@
 import logging
 import os
 from datetime import datetime, timedelta
+from enum import Enum
 from time import perf_counter
 from uuid import uuid4
 
 from flask import Flask, g, make_response, request
 from sqlalchemy import DateTime, ForeignKey, String, create_engine, func, select, update
+from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 from app_logging import configure_logging
@@ -39,6 +41,12 @@ class TicketType(Base):
     quantity: Mapped[int] = mapped_column()
 
 
+class TicketHoldStatus(str, Enum):
+    ACTIVE = "active"
+    CANCELED = "canceled"
+    COMPLETED = "completed"
+
+
 class TicketHold(Base):
     __tablename__ = "ticket_holds"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -47,7 +55,14 @@ class TicketHold(Base):
         ForeignKey("ticket_types.id"), nullable=False
     )
     quantity: Mapped[int] = mapped_column(nullable=False)
-    status: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[TicketHoldStatus] = mapped_column(
+        SqlEnum(
+            TicketHoldStatus,
+            values_callable=lambda enum: [status.value for status in enum],
+        ),
+        default=TicketHoldStatus.ACTIVE,
+        nullable=False,
+    )
     expires_at: Mapped[datetime] = mapped_column(DateTime(), nullable=False)
 
 
@@ -64,6 +79,10 @@ replica_engine = create_engine(os.environ["CORE_READ_DB_DSN"], logging_name="rep
 if os.environ.get("CORE_ENV") == "development":
     logging.getLogger("werkzeug").setLevel(logging.WARNING)
 
+
+@app.before_request
+def set_current_user():
+    g.user_id = request.headers.get("X-User-Id", type=int)
 
 @app.before_request
 def log_request_start():
@@ -227,8 +246,7 @@ def create_ticket_hold(ticket_type_id):
 
             ticket_hold = TicketHold(
                 ticket_type_id=ticket_type_id,
-                user_id=request.headers.get("X-User-Id", type=int),
-                status="active",
+                user_id=g.user_id,
                 quantity=quantity,
                 expires_at=datetime.now() + timedelta(minutes=15),
             )
@@ -243,7 +261,7 @@ def get_ticket_hold(ticket_hold_id):
         ticket_hold = session.scalars(
             select(TicketHold).where(
                 TicketHold.id == ticket_hold_id,
-                TicketHold.user_id == request.headers.get("X-User-Id", type=int),
+                TicketHold.user_id == g.user_id,
             )
         ).one_or_none()
 
@@ -259,6 +277,28 @@ def get_ticket_hold(ticket_hold_id):
         }
 
 
+@app.route("/ticket-holds/<int:ticket_hold_id>", methods=["DELETE"])
+def cancel_ticket_hold(ticket_hold_id):
+    with Session(primary_engine) as session:
+        ticket_hold = session.get(TicketHold, ticket_hold_id, with_for_update=True)
+        if ticket_hold is None or ticket_hold.user_id != g.user_id:
+            return {"error": "Not found"}, 404
+        if ticket_hold.status != TicketHoldStatus.ACTIVE:
+            return {"error": "Cannot cancel"}, 400
+
+        ticket_hold.status = TicketHoldStatus.CANCELED
+
+        session.execute(
+            update(TicketType)
+            .where(TicketType.id == ticket_hold.ticket_type_id)
+            .values(quantity=TicketType.quantity + ticket_hold.quantity)
+        )
+
+        session.commit()
+
+    return {}, 200
+
+
 @app.route("/ticket-holds/<int:ticket_hold_id>/complete", methods=["POST"])
 def complete_ticket_hold(ticket_hold_id):
     with Session(primary_engine) as session:
@@ -266,11 +306,11 @@ def complete_ticket_hold(ticket_hold_id):
             update(TicketHold)
             .where(
                 TicketHold.id == ticket_hold_id,
-                TicketHold.user_id == request.headers.get("X-User-Id", type=int),
-                TicketHold.status == "active",
+                TicketHold.user_id == g.user_id,
+                TicketHold.status == TicketHoldStatus.ACTIVE,
                 TicketHold.expires_at > func.now(),
             )
-            .values(status="completed")
+            .values(status=TicketHoldStatus.COMPLETED)
             .returning(
                 TicketHold.id,
                 TicketHold.ticket_type_id,

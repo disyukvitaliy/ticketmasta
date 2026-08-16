@@ -333,6 +333,20 @@ function ticketHoldPage() {
 
             this.ticketHold.status = 'completed';
             this.status = '';
+        },
+
+        async cancel() {
+            const result = await apiFetch(`/core/ticket-holds/${this.ticketHold.id}`, {
+                method: 'DELETE'
+            });
+
+            if (!result.ok) {
+                this.status = `Could not cancel hold: ${result.status}`;
+                return;
+            }
+
+            this.ticketHold.status = 'canceled';
+            this.status = '';
         }
     };
 }
