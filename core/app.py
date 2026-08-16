@@ -4,11 +4,11 @@ from datetime import datetime, timedelta
 from time import perf_counter
 from uuid import uuid4
 
-from flask import Flask, g, has_request_context, make_response, request
-from flask.logging import default_handler, wsgi_errors_stream
+from flask import Flask, g, make_response, request
 from sqlalchemy import DateTime, ForeignKey, String, create_engine, func, select, update
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
+from app_logging import configure_logging
 from tasks import send_ticket_email
 
 
@@ -51,67 +51,46 @@ class TicketHold(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(), nullable=False)
 
 
-primary_engine = create_engine(os.environ["CORE_DB_DSN"], logging_name="primary")
-replica_engine = create_engine(os.environ["CORE_READ_DB_DSN"], logging_name="replica")
+configure_logging()
 
+logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
-
-class RequestFormatter(logging.Formatter):
-    def format(self, record):
-        record.request_id = g.get("request_id", "-") if has_request_context() else "-"
-        return super().format(record)
-
-
-default_handler.setFormatter(
-    RequestFormatter("%(asctime)s %(levelname)s request_id=%(request_id)s %(message)s")
-)
-app.logger.setLevel(logging.INFO)
-
-
-def configure_sql_logger(database):
-    handler = logging.StreamHandler(wsgi_errors_stream)
-    handler.setFormatter(
-        RequestFormatter(
-            "%(asctime)s %(levelname)s request_id=%(request_id)s "
-            f"database={database} %(message)s"
-        )
-    )
-
-    logger = logging.getLogger(f"sqlalchemy.engine.Engine.{database}")
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
-    logger.propagate = False
+logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
+primary_engine = create_engine(os.environ["CORE_DB_DSN"], logging_name="primary")
+replica_engine = create_engine(os.environ["CORE_READ_DB_DSN"], logging_name="replica")
 
 
 if os.environ.get("CORE_ENV") == "development":
     logging.getLogger("werkzeug").setLevel(logging.WARNING)
-    configure_sql_logger("primary")
-    configure_sql_logger("replica")
 
 
 @app.before_request
-def start_request():
-    g.request_id = request.headers.get("X-Request-ID") or str(uuid4())
+def log_request_start():
+    value = request.headers.get("X-Request-ID") or str(uuid4())
+
+    g.request_id = value
     g.request_started_at = perf_counter()
-    app.logger.info(
-        "request_started method=%s path=%s",
+
+    logger.info(
+        "Request started: %s %s",
         request.method,
         request.path,
     )
 
 
 @app.after_request
-def finish_request(response):
+def log_request_end(response):
     response.headers["X-Request-ID"] = g.request_id
     duration_ms = (perf_counter() - g.request_started_at) * 1000
-    app.logger.info(
-        "request_completed method=%s path=%s status=%s duration_ms=%.2f",
+    logger.info(
+        "Request finished: %s %s status=%s duration_ms=%.2f",
         request.method,
         request.path,
         response.status_code,
         duration_ms,
     )
+
     return response
 
 
