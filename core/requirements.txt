@@ -4,3 +4,4 @@ alembic==1.18.5
 psycopg[binary]==3.3.4
 ruff==0.15.22
 dramatiq[redis]==2.2.0
+APScheduler==3.11.3

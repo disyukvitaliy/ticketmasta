@@ -19,6 +19,17 @@ A single conditional `UPDATE` could do the check and reduction in one query: `UP
 We use the lock-and-check flow for now because it keeps the outcomes clear: a
 missing ticket type and insufficient availability can have different responses.
 
+### Expiring ticket holds
+
+Expired holds are released by a scheduled background job that runs once per
+minute. This keeps expiration out of the request path and processes cleanup in
+efficient batches, keeping reservation code simpler. Under normal operation,
+the tradeoff is a hold remaining active for up to an extra minute after its
+expiry time.
+
+The expiry job works in batches instead of one large transaction. This avoids
+holding locks for too long if many expired holds build up.
+
 ### Read replicas
 
 We use replicas for reads that can tolerate a short delay, and the primary
@@ -57,5 +68,6 @@ than trying to scale one primary database indefinitely.
 4. Add a billing service for profit tracking and invoicing.
 5. Add a review and recommendation service.
 6. Split `core/app.py` into modules.
-7. Add tests.
-8. Add Elasticsearch for events.
+7. Add monitoring.
+8. Add tests.
+9. Add Elasticsearch for events.

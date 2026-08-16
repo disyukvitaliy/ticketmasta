@@ -25,7 +25,7 @@ class ContextFormatter(logging.Formatter):
         message = super().format(record)
 
         if record.name.startswith("sqlalchemy.engine."):
-            return " ".join(message.splitlines())
+            return " ".join(message.split())
 
         return message
 
