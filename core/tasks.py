@@ -1,7 +1,5 @@
-import logging
 import os
 import smtplib
-from contextvars import ContextVar
 from datetime import datetime
 from email.message import EmailMessage
 
@@ -10,76 +8,12 @@ from dramatiq.brokers.redis import RedisBroker
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
-from app_logging import configure_logging
 from models import TicketHoldStatus
 
 broker = RedisBroker(url=os.environ["CORE_REDIS_URL"])
 dramatiq.set_broker(broker)
 
-job_id = ContextVar("job_id", default=None)
-
-
-logger = logging.getLogger(__name__)
-
-logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 primary_engine = create_engine(os.environ["CORE_DB_DSN"], logging_name="primary")
-
-
-class ContextFilter(logging.Filter):
-    def filter(self, record):
-        current_job_id = job_id.get()
-        record.job_id = f"job_id={current_job_id} " if current_job_id else ""
-
-        return True
-
-
-class LoggingMiddleware(dramatiq.Middleware):
-    def after_enqueue(self, broker, message, delay=None):
-        logger.info(
-            "actor=%s Job enqueued",
-            message.actor_name,
-        )
-
-    def after_process_boot(self, broker):
-        configure_logging("job_id", ContextFilter())
-
-    def before_process_message(self, broker, message):
-        job_id.set(message.message_id)
-
-        logger.info(
-            "actor=%s Job started",
-            message.actor_name,
-        )
-
-    def after_process_message(
-        self,
-        broker,
-        message,
-        *,
-        result=None,
-        exception=None,
-    ):
-        if exception is None:
-            logger.info(
-                "actor=%s Job finished",
-                message.actor_name,
-            )
-
-        self._clear_context()
-
-    def after_skip_message(self, broker, message):
-        logger.info(
-            "actor=%s Job skipped",
-            message.actor_name,
-        )
-
-        self._clear_context()
-
-    def _clear_context(self):
-        job_id.set(None)
-
-
-broker.add_middleware(LoggingMiddleware())
 
 
 EXPIRE_TICKET_HOLDS_BATCH = text("""
@@ -121,12 +55,12 @@ def expire_ticket_holds():
             updated_ticket_types = session.scalars(
                 EXPIRE_TICKET_HOLDS_BATCH,
                 {
-                        "active_status": TicketHoldStatus.ACTIVE.value,
-                        "expired_status": TicketHoldStatus.EXPIRED.value,
-                        "batch_size": 1000,
-                        "expires_before": expires_before,
-                    },
-                ).all()
+                    "active_status": TicketHoldStatus.ACTIVE.value,
+                    "expired_status": TicketHoldStatus.EXPIRED.value,
+                    "batch_size": 1000,
+                    "expires_before": expires_before,
+                },
+            ).all()
             session.commit()
 
         if not updated_ticket_types:

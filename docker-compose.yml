@@ -20,7 +20,7 @@ services:
     build:
       context: ./core
       dockerfile: Dockerfile
-    command: ["dramatiq", "tasks", "--processes", "1", "--threads", "2", "--skip-logging"]
+    command: ["dramatiq", "worker", "--processes", "1", "--threads", "2", "--skip-logging"]
     volumes:
       - ./core:/app
     environment:

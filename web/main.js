@@ -59,7 +59,7 @@ function loginPage() {
             const [accessToken, refreshToken] = (await result.text()).split('|');
             localStorage.setItem('access-token', accessToken);
             localStorage.setItem('refresh-token', refreshToken);
-            window.location.href = '/profile';
+            window.location.href = '/';
         }
     };
 }

@@ -4,16 +4,17 @@ from datetime import datetime, timedelta
 from time import perf_counter
 from uuid import uuid4
 
+import dramatiq
 from flask import Flask, g, has_request_context, make_response, request
 from sqlalchemy import create_engine, func, select, update
 from sqlalchemy.orm import Session
 
 from app_logging import configure_logging
 from models import Event, TicketHold, TicketHoldStatus, TicketType, Venue
-from tasks import send_ticket_email
+from tasks import broker, send_ticket_email
 
 
-class ContextFilter(logging.Filter):
+class RequestContextFilter(logging.Filter):
     def filter(self, record):
         request_id = g.get("request_id") if has_request_context() else None
         record.request_id = f"request_id={request_id} " if request_id else ""
@@ -21,10 +22,22 @@ class ContextFilter(logging.Filter):
         return True
 
 
-configure_logging("request_id", ContextFilter())
+configure_logging("request_id", RequestContextFilter())
 
 logger = logging.getLogger(__name__)
+
+
+class EnqueueLoggingMiddleware(dramatiq.Middleware):
+    def after_enqueue(self, broker, message, delay=None):
+        logger.info(
+            "actor=%s Job enqueued",
+            message.actor_name,
+        )
+
+
 app = Flask(__name__)
+
+broker.add_middleware(EnqueueLoggingMiddleware())
 
 logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 primary_engine = create_engine(os.environ["CORE_DB_DSN"], logging_name="primary")
