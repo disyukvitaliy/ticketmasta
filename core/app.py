@@ -16,13 +16,18 @@ from tasks import broker, send_ticket_email
 
 class RequestContextFilter(logging.Filter):
     def filter(self, record):
+        fields = dict(getattr(record, "fields", {}))
         request_id = g.get("request_id") if has_request_context() else None
-        record.request_id = f"request_id={request_id} " if request_id else ""
+
+        if request_id:
+            fields = {"request_id": request_id, **fields}
+
+        record.fields = fields
 
         return True
 
 
-configure_logging("request_id", RequestContextFilter())
+configure_logging(RequestContextFilter())
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +35,8 @@ logger = logging.getLogger(__name__)
 class EnqueueLoggingMiddleware(dramatiq.Middleware):
     def after_enqueue(self, broker, message, delay=None):
         logger.info(
-            "actor=%s Job enqueued",
-            message.actor_name,
+            "Job enqueued",
+            extra={"fields": {"actor": message.actor_name}},
         )
 
 

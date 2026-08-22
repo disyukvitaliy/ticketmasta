@@ -15,22 +15,26 @@ logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 
 class JobContextFilter(logging.Filter):
     def filter(self, record):
+        fields = dict(getattr(record, "fields", {}))
         current_job_id = job_id.get()
-        record.job_id = f"job_id={current_job_id} " if current_job_id else ""
 
+        if current_job_id:
+            fields = {"job_id": current_job_id, **fields}
+
+        record.fields = fields
         return True
 
 
 class JobLoggingMiddleware(dramatiq.Middleware):
     def after_process_boot(self, broker):
-        configure_logging("job_id", JobContextFilter())
+        configure_logging(JobContextFilter())
 
     def before_process_message(self, broker, message):
         job_id.set(message.message_id)
 
         logger.info(
-            "actor=%s Job started",
-            message.actor_name,
+            "Job started",
+            extra={"fields": {"actor": message.actor_name}},
         )
 
     def after_process_message(
@@ -43,16 +47,16 @@ class JobLoggingMiddleware(dramatiq.Middleware):
     ):
         if exception is None:
             logger.info(
-                "actor=%s Job finished",
-                message.actor_name,
+                "Job finished",
+                extra={"fields": {"actor": message.actor_name}},
             )
 
         self._clear_context()
 
     def after_skip_message(self, broker, message):
         logger.info(
-            "actor=%s Job skipped",
-            message.actor_name,
+            "Job skipped",
+            extra={"fields": {"actor": message.actor_name}},
         )
 
         self._clear_context()
