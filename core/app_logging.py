@@ -1,23 +1,4 @@
 import logging
-from contextvars import ContextVar
-
-from flask import g, has_request_context
-
-job_id = ContextVar("job_id", default=None)
-
-
-class ContextFilter(logging.Filter):
-    def filter(self, record):
-        context = []
-
-        if has_request_context():
-            context.append(f"request_id={g.get('request_id')}")
-
-        if current_job_id := job_id.get():
-            context.append(f"job_id={current_job_id}")
-
-        record.context = f"{' '.join(context)} " if context else ""
-        return True
 
 
 class ContextFormatter(logging.Formatter):
@@ -30,16 +11,19 @@ class ContextFormatter(logging.Formatter):
         return message
 
 
-def configure_logging():
+def configure_logging(key=None, context_filter=None):
     root_logger = logging.getLogger()
 
-    if root_logger.handlers:
-        return
-
     handler = logging.StreamHandler()
-    handler.addFilter(ContextFilter())
+
+    if context_filter:
+        handler.addFilter(context_filter)
+
+    context_format = f"%({key})s" if key else ""
     handler.setFormatter(
-        ContextFormatter("%(asctime)s %(levelname)s %(name)s %(context)s%(message)s")
+        ContextFormatter(
+            "%(asctime)s %(levelname)s %(name)s " + context_format + "%(message)s"
+        )
     )
 
     root_logger.setLevel(logging.INFO)

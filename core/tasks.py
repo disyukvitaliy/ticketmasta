@@ -10,14 +10,13 @@ from dramatiq.brokers.redis import RedisBroker
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
-from app_logging import configure_logging, job_id
+from app_logging import configure_logging
 from models import TicketHoldStatus
 
 broker = RedisBroker(url=os.environ["CORE_REDIS_URL"])
 dramatiq.set_broker(broker)
 
-
-configure_logging()
+job_id = ContextVar("job_id", default=None)
 
 
 logger = logging.getLogger(__name__)
@@ -25,13 +24,27 @@ logger = logging.getLogger(__name__)
 logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 primary_engine = create_engine(os.environ["CORE_DB_DSN"], logging_name="primary")
 
-_job_id_token = ContextVar("_job_id_token", default=None)
+
+class ContextFilter(logging.Filter):
+    def filter(self, record):
+        current_job_id = job_id.get()
+        record.job_id = f"job_id={current_job_id} " if current_job_id else ""
+
+        return True
 
 
 class LoggingMiddleware(dramatiq.Middleware):
+    def after_enqueue(self, broker, message, delay=None):
+        logger.info(
+            "actor=%s Job enqueued",
+            message.actor_name,
+        )
+
+    def after_process_boot(self, broker):
+        configure_logging("job_id", ContextFilter())
+
     def before_process_message(self, broker, message):
-        token = job_id.set(message.message_id)
-        _job_id_token.set(token)
+        job_id.set(message.message_id)
 
         logger.info(
             "actor=%s Job started",
@@ -63,11 +76,7 @@ class LoggingMiddleware(dramatiq.Middleware):
         self._clear_context()
 
     def _clear_context(self):
-        token = _job_id_token.get()
-
-        if token is not None:
-            job_id.reset(token)
-            _job_id_token.set(None)
+        job_id.set(None)
 
 
 broker.add_middleware(LoggingMiddleware())

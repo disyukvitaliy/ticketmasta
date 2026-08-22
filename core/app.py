@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from time import perf_counter
 from uuid import uuid4
 
-from flask import Flask, g, make_response, request
+from flask import Flask, g, has_request_context, make_response, request
 from sqlalchemy import create_engine, func, select, update
 from sqlalchemy.orm import Session
 
@@ -12,7 +12,16 @@ from app_logging import configure_logging
 from models import Event, TicketHold, TicketHoldStatus, TicketType, Venue
 from tasks import send_ticket_email
 
-configure_logging()
+
+class ContextFilter(logging.Filter):
+    def filter(self, record):
+        request_id = g.get("request_id") if has_request_context() else None
+        record.request_id = f"request_id={request_id} " if request_id else ""
+
+        return True
+
+
+configure_logging("request_id", ContextFilter())
 
 logger = logging.getLogger(__name__)
 app = Flask(__name__)
@@ -29,6 +38,7 @@ if os.environ.get("CORE_ENV") == "development":
 @app.before_request
 def set_current_user():
     g.user_id = request.headers.get("X-User-Id", type=int)
+
 
 @app.before_request
 def log_request_start():
