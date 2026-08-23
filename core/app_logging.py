@@ -5,7 +5,6 @@ class ContextFilter(logging.Filter):
     def filter(self, record):
         fields = {**self.context_fields(), **getattr(record, "fields", {})}
         record.fields = fields
-        record.context = format_context(fields)
 
         return True
 
@@ -13,10 +12,12 @@ class ContextFilter(logging.Filter):
         return {}
 
 
-def format_context(fields):
-    context = " ".join(f"{key}={value}" for key, value in fields.items())
+class PlainTextFormatter(logging.Formatter):
+    def formatMessage(self, record):
+        context = " ".join(f"{key}={value}" for key, value in record.fields.items())
+        record.context = f" {context} " if context else " "
 
-    return f"{context} " if context else ""
+        return super().formatMessage(record)
 
 
 def configure_logging(context_filter=None):
@@ -25,9 +26,8 @@ def configure_logging(context_filter=None):
     handler = logging.StreamHandler()
 
     handler.addFilter(context_filter or ContextFilter())
-
     handler.setFormatter(
-        logging.Formatter("%(asctime)s %(levelname)s %(name)s %(context)s%(message)s")
+        PlainTextFormatter("%(asctime)s %(levelname)s %(name)s%(context)s%(message)s")
     )
 
     root_logger.setLevel(logging.INFO)
