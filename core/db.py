@@ -15,11 +15,11 @@ sqlalchemy_message_filter = SqlAlchemyMessageFilter()
 
 
 def _create_engine(dsn, logging_name):
-    logging.getLogger(
-        f"sqlalchemy.engine.Engine.{logging_name}"
-    ).addFilter(sqlalchemy_message_filter)
+    engine = create_engine(dsn, logging_name=logging_name)
+    engine.logger.addFilter(sqlalchemy_message_filter)
+    engine.logger.setLevel(logging.INFO)
 
-    return create_engine(dsn, logging_name=logging_name)
+    return engine
 
 
 def create_primary_engine():

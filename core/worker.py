@@ -10,8 +10,6 @@ job_id = ContextVar("job_id", default=None)
 
 logger = logging.getLogger(__name__)
 
-logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
-
 
 class JobContextFilter(ContextFilter):
     def context_fields(self):

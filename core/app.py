@@ -42,7 +42,6 @@ app = Flask(__name__)
 
 broker.add_middleware(EnqueueLoggingMiddleware())
 
-logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 primary_engine = create_primary_engine()
 replica_engine = create_replica_engine()
 
@@ -64,9 +63,13 @@ def log_request_start():
     g.request_started_at = perf_counter()
 
     logger.info(
-        "Request started: %s %s",
-        request.method,
-        request.path,
+        "Request started",
+        extra={
+            "fields": {
+                "method": request.method,
+                "path": request.path,
+            }
+        },
     )
 
 
@@ -74,12 +77,17 @@ def log_request_start():
 def log_request_end(response):
     response.headers["X-Request-ID"] = g.request_id
     duration_ms = (perf_counter() - g.request_started_at) * 1000
+
     logger.info(
-        "Request finished: %s %s status=%s duration_ms=%.2f",
-        request.method,
-        request.path,
-        response.status_code,
-        duration_ms,
+        "Request finished",
+        extra={
+            "fields": {
+                "method": request.method,
+                "path": request.path,
+                "status": response.status_code,
+                "duration_ms": round(duration_ms, 2),
+            }
+        },
     )
 
     return response

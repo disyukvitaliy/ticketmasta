@@ -11,6 +11,7 @@ Run commands from the repository root.
 
 ```sh
 ./ape core lint
+./ape core lint --fix
 ./ape core format
 ./ape core imports
 ```

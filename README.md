@@ -72,3 +72,4 @@ than trying to scale one primary database indefinitely.
 8. Add tests.
 9. Add Elasticsearch for events.
 10. Have `send_ticket_email` query its ticket type and event data itself.
+11. Add JSON logs.
