@@ -9,20 +9,20 @@ from flask import Flask, g, has_request_context, make_response, request
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
-from app_logging import ContextFilter, configure_logging
+from app_logging import configure_logging
 from db import create_primary_engine, create_replica_engine
 from models import Event, TicketHold, TicketHoldStatus, TicketType, Venue
 from tasks import broker, send_ticket_email
 
 
-class RequestContextFilter(ContextFilter):
-    def context_fields(self):
+class RequestContextFilter(logging.Filter):
+    def filter(self, record):
         request_id = g.get("request_id") if has_request_context() else None
 
         if request_id:
-            return {"request_id": request_id}
+            record.fields["request_id"] = request_id
 
-        return {}
+        return True
 
 
 configure_logging(RequestContextFilter())

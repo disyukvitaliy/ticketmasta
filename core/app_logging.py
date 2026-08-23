@@ -3,13 +3,9 @@ import logging
 
 class ContextFilter(logging.Filter):
     def filter(self, record):
-        fields = {**self.context_fields(), **getattr(record, "fields", {})}
-        record.fields = fields
+        record.fields = getattr(record, "fields", {})
 
         return True
-
-    def context_fields(self):
-        return {}
 
 
 class PlainTextFormatter(logging.Formatter):
@@ -25,7 +21,11 @@ def configure_logging(context_filter=None):
 
     handler = logging.StreamHandler()
 
-    handler.addFilter(context_filter or ContextFilter())
+    handler.addFilter(ContextFilter())
+
+    if context_filter:
+        handler.addFilter(context_filter)
+
     handler.setFormatter(
         PlainTextFormatter("%(asctime)s %(levelname)s %(name)s%(context)s%(message)s")
     )
