@@ -319,3 +319,21 @@ def complete_ticket_hold(ticket_hold_id):
     )
 
     return {"id": hold_id}
+
+
+@app.shell_context_processor
+def make_shell_context():
+    from pprint import pprint
+
+    return {
+        "Event": Event,
+        "TicketHold": TicketHold,
+        "TicketHoldStatus": TicketHoldStatus,
+        "TicketType": TicketType,
+        "Venue": Venue,
+        "Session": Session,
+        "primary_engine": primary_engine,
+        "select": select,
+        "logger": logger,
+        "pp": pprint,
+    }

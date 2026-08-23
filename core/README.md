@@ -44,6 +44,14 @@ Reset and seed the core database:
 ./ape core run python seeds.py
 ```
 
+## Flask shell
+
+Start a shell with the application loaded:
+
+```sh
+./ape core sh
+```
+
 ## Background jobs
 
 `core_worker` consumes Redis-backed jobs. Completing a ticket hold enqueues an
