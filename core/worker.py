@@ -3,7 +3,7 @@ from contextvars import ContextVar
 
 import dramatiq
 
-from app_logging import configure_logging
+from app_logging import ContextFilter, configure_logging
 from tasks import broker
 
 job_id = ContextVar("job_id", default=None)
@@ -13,16 +13,14 @@ logger = logging.getLogger(__name__)
 logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 
 
-class JobContextFilter(logging.Filter):
-    def filter(self, record):
-        fields = dict(getattr(record, "fields", {}))
+class JobContextFilter(ContextFilter):
+    def context_fields(self):
         current_job_id = job_id.get()
 
         if current_job_id:
-            fields = {"job_id": current_job_id, **fields}
+            return {"job_id": current_job_id}
 
-        record.fields = fields
-        return True
+        return {}
 
 
 class JobLoggingMiddleware(dramatiq.Middleware):

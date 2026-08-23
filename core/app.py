@@ -6,25 +6,23 @@ from uuid import uuid4
 
 import dramatiq
 from flask import Flask, g, has_request_context, make_response, request
-from sqlalchemy import create_engine, func, select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
-from app_logging import configure_logging
+from app_logging import ContextFilter, configure_logging
+from db import create_primary_engine, create_replica_engine
 from models import Event, TicketHold, TicketHoldStatus, TicketType, Venue
 from tasks import broker, send_ticket_email
 
 
-class RequestContextFilter(logging.Filter):
-    def filter(self, record):
-        fields = dict(getattr(record, "fields", {}))
+class RequestContextFilter(ContextFilter):
+    def context_fields(self):
         request_id = g.get("request_id") if has_request_context() else None
 
         if request_id:
-            fields = {"request_id": request_id, **fields}
+            return {"request_id": request_id}
 
-        record.fields = fields
-
-        return True
+        return {}
 
 
 configure_logging(RequestContextFilter())
@@ -45,8 +43,8 @@ app = Flask(__name__)
 broker.add_middleware(EnqueueLoggingMiddleware())
 
 logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
-primary_engine = create_engine(os.environ["CORE_DB_DSN"], logging_name="primary")
-replica_engine = create_engine(os.environ["CORE_READ_DB_DSN"], logging_name="replica")
+primary_engine = create_primary_engine()
+replica_engine = create_replica_engine()
 
 
 if os.environ.get("CORE_ENV") == "development":

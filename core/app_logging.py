@@ -1,20 +1,22 @@
 import logging
 
 
-class ContextFormatter(logging.Formatter):
-    def format(self, record):
-        fields = getattr(record, "fields", {})
-        record.context = " ".join(f"{key}={value}" for key, value in fields.items())
+class ContextFilter(logging.Filter):
+    def filter(self, record):
+        fields = {**self.context_fields(), **getattr(record, "fields", {})}
+        record.fields = fields
+        record.context = format_context(fields)
 
-        if record.context:
-            record.context += " "
+        return True
 
-        message = super().format(record)
+    def context_fields(self):
+        return {}
 
-        if record.name.startswith("sqlalchemy.engine."):
-            return " ".join(message.split())
 
-        return message
+def format_context(fields):
+    context = " ".join(f"{key}={value}" for key, value in fields.items())
+
+    return f"{context} " if context else ""
 
 
 def configure_logging(context_filter=None):
@@ -22,11 +24,10 @@ def configure_logging(context_filter=None):
 
     handler = logging.StreamHandler()
 
-    if context_filter:
-        handler.addFilter(context_filter)
+    handler.addFilter(context_filter or ContextFilter())
 
     handler.setFormatter(
-        ContextFormatter("%(asctime)s %(levelname)s %(name)s %(context)s%(message)s")
+        logging.Formatter("%(asctime)s %(levelname)s %(name)s %(context)s%(message)s")
     )
 
     root_logger.setLevel(logging.INFO)
