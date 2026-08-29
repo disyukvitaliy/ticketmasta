@@ -16,6 +16,17 @@ Run commands from the repository root.
 ./ape core imports
 ```
 
+## Tests
+
+Tests use a separate `core_test` database.
+
+```sh
+docker compose exec core_db dropdb -U core --if-exists core_test
+docker compose exec core_db createdb -U core core_test
+docker compose --progress quiet -f docker-compose.yml -f test.docker-compose.yml run --rm core alembic upgrade head
+./ape core test
+```
+
 ## Migrations
 
 Create a migration:

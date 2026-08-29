@@ -5,11 +5,13 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 DC="docker compose"
+DC_TEST="docker compose --progress quiet -f docker-compose.yml -f test.docker-compose.yml"
 
 case "$1" in
   bash | b) $DC run --rm -it core bash;;
   shell | sh) "$0" run flask shell;;
   run | r) $DC --progress quiet run --rm core "${@:2}";;
+  test | t) $DC_TEST run --rm core pytest "${@:2}";;
   lint | l) "$0" run ruff check . "${@:2}";;
   format | f) "$0" run ruff format .;;
   imports | i) "$0" run ruff check --select I --fix .;;

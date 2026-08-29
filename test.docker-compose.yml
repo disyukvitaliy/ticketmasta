@@ -5,3 +5,9 @@ services:
       GOOSE_DBSTRING: postgres://auth:auth@auth_db:5432/auth_test?sslmode=disable
       AUTH_DB_DSN: postgres://auth:auth@auth_db:5432/auth_test?sslmode=disable
       LOG_LEVEL: silent
+  core:
+    command: pytest
+    environment:
+      CORE_DB_DSN: postgresql+psycopg://core:core@core_db:5432/core_test
+      CORE_READ_DB_DSN: postgresql+psycopg://core:core@core_db:5432/core_test
+      CORE_REDIS_URL: redis://redis:6379/1
