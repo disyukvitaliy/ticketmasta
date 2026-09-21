@@ -68,3 +68,13 @@ Start a shell with the application loaded:
 `core_worker` consumes Redis-backed jobs. Completing a ticket hold enqueues an
 email task, which the worker sends through Mailpit. Open Mailpit at
 http://localhost:8025.
+
+## TODO
+
+1. Add a payment flow: payment-pending holds, provider idempotency, and webhook
+   completion or failure.
+2. Support buying several ticket types in one purchase.
+3. Add approximate ticket availability.
+4. Add tests.
+5. Add Elasticsearch for events.
+6. Have `send_ticket_email` query its ticket type and event data itself.

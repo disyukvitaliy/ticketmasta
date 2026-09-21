@@ -62,14 +62,7 @@ than trying to scale one primary database indefinitely.
 
 ## TODO
 
-1. Add a payment flow: payment-pending holds, provider idempotency, and webhook completion or failure.
-2. Support buying several ticket types in one purchase.
-3. Add approximate ticket availability.
-4. Add a billing service for profit tracking and invoicing.
-5. Add a review and recommendation service.
-6. Split `core/app.py` into modules.
-7. Add monitoring.
-8. Add tests.
-9. Add Elasticsearch for events.
-10. Have `send_ticket_email` query its ticket type and event data itself.
-11. Add JSON logs.
+1. Add a billing service for profit tracking and invoicing.
+2. Add a review and recommendation service.
+3. Add monitoring.
+4. Add JSON logs.
