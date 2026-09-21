@@ -2,8 +2,8 @@ import pytest
 from factories import Factory
 from sqlalchemy.orm import Session
 
-from app import create_app
-from db import create_primary_engine
+from application import create_app
+from db import configure_sessions, create_primary_engine
 
 
 @pytest.fixture(scope="session")
@@ -26,7 +26,13 @@ def connection(engine):
 
 @pytest.fixture
 def app(connection):
-    app = create_app(primary_engine=connection, replica_engine=connection)
+    configure_sessions(
+        connection,
+        connection,
+        join_transaction_mode="create_savepoint",
+    )
+
+    app = create_app()
     app.config.update(TESTING=True)
 
     return app

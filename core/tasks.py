@@ -6,16 +6,12 @@ from email.message import EmailMessage
 import dramatiq
 from dramatiq.brokers.redis import RedisBroker
 from sqlalchemy import text
-from sqlalchemy.orm import Session
 
-from db import create_primary_engine
-from models import TicketHoldStatus
+from db import PrimarySession
+from ticketing.models import TicketHoldStatus
 
 broker = RedisBroker(url=os.environ["CORE_REDIS_URL"])
 dramatiq.set_broker(broker)
-
-primary_engine = create_primary_engine()
-
 
 EXPIRE_TICKET_HOLDS_BATCH = text("""
     WITH holds_to_expire AS (
@@ -52,7 +48,7 @@ def expire_ticket_holds():
     expires_before = datetime.now()
 
     while True:
-        with Session(primary_engine) as session:
+        with PrimarySession() as session:
             updated_ticket_types = session.scalars(
                 EXPIRE_TICKET_HOLDS_BATCH,
                 {

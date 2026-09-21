@@ -3,29 +3,14 @@ from enum import Enum
 
 from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy import Enum as SqlEnum
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
 
-
-class Base(DeclarativeBase):
-    pass
-
-
-class Venue(Base):
-    __tablename__ = "venues"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(255))
-
-
-class Event(Base):
-    __tablename__ = "events"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(255))
-    starts_at: Mapped[datetime] = mapped_column(DateTime())
-    venue_id: Mapped[int] = mapped_column(ForeignKey("venues.id"))
+from db import Base
 
 
 class TicketType(Base):
     __tablename__ = "ticket_types"
+
     id: Mapped[int] = mapped_column(primary_key=True)
     event_id: Mapped[int] = mapped_column(ForeignKey("events.id"))
     name: Mapped[str] = mapped_column(String(255))
@@ -42,6 +27,7 @@ class TicketHoldStatus(str, Enum):
 
 class TicketHold(Base):
     __tablename__ = "ticket_holds"
+
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(nullable=False)
     ticket_type_id: Mapped[int] = mapped_column(

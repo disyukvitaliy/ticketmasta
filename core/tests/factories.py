@@ -1,4 +1,4 @@
-from models import Venue
+from venues.models import Venue
 
 
 class Factory:

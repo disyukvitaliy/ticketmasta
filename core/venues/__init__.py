@@ -1,0 +1,1 @@
+"""Venue catalogue domain."""
