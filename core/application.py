@@ -4,7 +4,7 @@ from time import perf_counter
 from uuid import uuid4
 
 import dramatiq
-from flask import Flask, g, has_request_context, make_response, request
+from flask import Flask, g, has_request_context, request
 from sqlalchemy import select
 
 from app_logging import configure_logging
@@ -93,22 +93,6 @@ def create_app():
         )
 
         return response
-
-    @app.route("/profile")
-    def profile():
-        headers_to_include = [
-            "X-User-Id",
-            "X-User-Email",
-            "X-User-Role",
-        ]  # Adjust headers as needed
-        headers_text = "\n".join(
-            f"{header}: {request.headers.get(header, 'Not Provided')}"
-            for header in headers_to_include
-        )
-
-        response = make_response(headers_text)
-        response.mimetype = "text/plain"
-        return response, 200
 
     @app.shell_context_processor
     def make_shell_context():
