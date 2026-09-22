@@ -1,6 +1,9 @@
-def test_list_venues_returns_venues_ordered_by_name(client, factory):
-    zebra_hall = factory.create_venue(name="Zebra Hall")
-    alpha_arena = factory.create_venue(name="Alpha Arena")
+from tests.factories import VenueFactory
+
+
+def test_list_venues_returns_venues_ordered_by_name(client):
+    zebra_hall = VenueFactory(name="Zebra Hall")
+    alpha_arena = VenueFactory(name="Alpha Arena")
 
     response = client.get("/venues")
 

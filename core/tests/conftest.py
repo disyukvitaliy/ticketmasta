@@ -1,9 +1,8 @@
 import pytest
-from factories import Factory
-from sqlalchemy.orm import Session
 
 from application import create_app
 from db import configure_sessions, create_primary_engine
+from tests.db import TestSession
 
 
 @pytest.fixture(scope="session")
@@ -24,31 +23,25 @@ def connection(engine):
     connection.close()
 
 
-@pytest.fixture
-def app(connection):
+@pytest.fixture(autouse=True)
+def session(connection):
     configure_sessions(
         connection,
         connection,
         join_transaction_mode="create_savepoint",
     )
+    TestSession.configure(
+        bind=connection,
+        join_transaction_mode="create_savepoint",
+    )
 
+    yield TestSession()
+
+    TestSession.remove()
+
+
+@pytest.fixture
+def client():
     app = create_app()
     app.config.update(TESTING=True)
-
-    return app
-
-
-@pytest.fixture
-def client(app):
     return app.test_client()
-
-
-@pytest.fixture
-def session(connection):
-    with Session(connection) as session:
-        yield session
-
-
-@pytest.fixture
-def factory(session):
-    return Factory(session)

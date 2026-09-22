@@ -3,11 +3,12 @@ from datetime import datetime
 
 import dramatiq
 from dramatiq.brokers.redis import RedisBroker
-from sqlalchemy import text
+from sqlalchemy import select, text
 
 import mailer
-from db import PrimarySession
-from ticketing.models import TicketHoldStatus
+from db import PrimarySession, ReplicaSession
+from events.models import Event
+from ticketing.models import TicketHoldStatus, TicketType
 
 broker = RedisBroker(url=os.environ["CORE_REDIS_URL"])
 dramatiq.set_broker(broker)
@@ -64,7 +65,14 @@ def expire_ticket_holds():
 
 
 @dramatiq.actor(queue_name="email", max_retries=3)
-def send_ticket_email(recipient, event_name, ticket_type_name, quantity):
+def send_ticket_email(ticket_type_id, recipient, quantity):
+    with ReplicaSession() as session:
+        ticket_type_name, event_name = session.execute(
+            select(TicketType.name, Event.name)
+            .join(Event)
+            .where(TicketType.id == ticket_type_id)
+        ).one()
+
     mailer.send(
         recipient,
         "Your tickets",

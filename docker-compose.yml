@@ -25,11 +25,14 @@ services:
       - ./core:/app
     environment:
       CORE_DB_DSN: postgresql+psycopg://core:core@core_db:5432/core
+      CORE_READ_DB_DSN: postgresql+psycopg://core:core@core_db_replica:5432/core
       CORE_REDIS_URL: redis://redis:6379/1
       CORE_SMTP_HOST: mailpit
       CORE_SMTP_PORT: 1025
       CORE_EMAIL_FROM: tickets@ticketmasta.com
     depends_on:
+      - core_db
+      - core_db_replica
       - redis
       - mailpit
   core_scheduler:

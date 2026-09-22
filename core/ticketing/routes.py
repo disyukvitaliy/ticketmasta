@@ -4,7 +4,6 @@ from flask import Blueprint, g, request
 from sqlalchemy import func, select, update
 
 from db import PrimarySession, ReplicaSession
-from events.models import Event
 from tasks import send_ticket_email
 from ticketing.models import TicketHold, TicketHoldStatus, TicketType
 
@@ -146,17 +145,9 @@ def complete_ticket_hold(ticket_hold_id):
         hold_id, ticket_type_id, quantity = completed_hold
         session.commit()
 
-    with ReplicaSession() as session:
-        ticket_type_name, event_name = session.execute(
-            select(TicketType.name, Event.name)
-            .join(Event)
-            .where(TicketType.id == ticket_type_id)
-        ).one()
-
     send_ticket_email.send(
+        ticket_type_id,
         request.headers["X-User-Email"],
-        event_name,
-        ticket_type_name,
         quantity,
     )
 

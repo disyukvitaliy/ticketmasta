@@ -4,10 +4,10 @@ from contextvars import ContextVar
 import dramatiq
 
 from app_logging import configure_logging
-from db import configure_sessions, create_primary_engine
+from db import configure_sessions, create_primary_engine, create_replica_engine
 from tasks import broker
 
-configure_sessions(create_primary_engine())
+configure_sessions(create_primary_engine(), create_replica_engine())
 
 job_id = ContextVar("job_id", default=None)
 

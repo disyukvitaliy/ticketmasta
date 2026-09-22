@@ -6,3 +6,4 @@ ruff==0.15.22
 dramatiq[redis]==2.2.0
 APScheduler==3.11.3
 pytest==9.0.2
+factory-boy==3.3.3
