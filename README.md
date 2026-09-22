@@ -53,6 +53,12 @@ can be best-effort. Ticket delivery is different: before it becomes the way a
 customer receives a ticket, it should use a durable outbox or similar pattern
 so the ticket is not lost between saving the purchase and queuing the job.
 
+### Test coverage
+
+Core tests cover the main endpoint flows and important ticket-hold behavior.
+Exhaustive coverage is outside the scope of this learning project, so tests are
+added where they demonstrate or protect meaningful behavior.
+
 ### Database scale
 
 PostgreSQL is a performant starting point, but a single database is not assumed
