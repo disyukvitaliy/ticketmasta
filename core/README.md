@@ -71,10 +71,9 @@ http://localhost:8025.
 
 ## TODO
 
-1. Add a payment flow: payment-pending holds, provider idempotency, and webhook
-   completion or failure.
-2. Support buying several ticket types in one purchase.
-3. Add approximate ticket availability.
-4. Add tests.
-5. Add Elasticsearch for events.
-6. Have `send_ticket_email` query its ticket type and event data itself.
+- Add a payment flow: payment-pending holds, provider idempotency, and webhook
+  completion or failure.
+- Support buying several ticket types in one purchase.
+- Add approximate ticket availability.
+- Add Elasticsearch for events.
+- Manage and lock Python dependencies with `pyproject.toml` and a modern dependency tool.
