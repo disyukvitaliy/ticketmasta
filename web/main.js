@@ -310,14 +310,7 @@ function ticketHoldPage() {
             }
 
             this.event = await eventResult.json();
-
-            const venueResult = await apiFetch(`/core/venues/${this.event.venue_id}`);
-            if (!venueResult.ok) {
-                this.status = `Could not load venue: ${venueResult.status}`;
-                return;
-            }
-
-            this.venue = await venueResult.json();
+            this.venue = this.event.venue;
             this.status = '';
         },
 

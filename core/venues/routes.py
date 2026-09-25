@@ -2,6 +2,7 @@ from flask import Blueprint, request
 from sqlalchemy import select
 
 from db import ReplicaSession
+from serializers import VenueSerializer
 from venues.models import Venue
 
 bp = Blueprint("venues", __name__)
@@ -16,7 +17,7 @@ def list_venues():
         )
         venues = session.scalars(select_stmt).all()
 
-    return [{"id": venue.id, "name": venue.name} for venue in venues]
+    return VenueSerializer.serialize_many(venues)
 
 
 @bp.get("/venues/<int:venue_id>")
@@ -27,4 +28,4 @@ def get_venue(venue_id):
         if venue is None:
             return {"error": "Not found"}, 404
 
-        return {"id": venue.id, "name": venue.name}
+        return VenueSerializer.serialize(venue)

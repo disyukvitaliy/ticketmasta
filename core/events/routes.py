@@ -2,10 +2,11 @@ from datetime import datetime
 
 from flask import Blueprint, request
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from db import ReplicaSession
 from events.models import Event
-from venues.models import Venue
+from serializers import EventSerializer
 
 bp = Blueprint("events", __name__)
 
@@ -16,8 +17,8 @@ def list_events(venue_id=None):
     page = request.args.get("page", default=1, type=int)
     with ReplicaSession() as session:
         select_stmt = (
-            select(Event, Venue)
-            .join(Venue)
+            select(Event)
+            .options(selectinload(Event.venue))
             .where(Event.starts_at >= datetime.now())
             .order_by(Event.starts_at)
             .offset((page - 1) * 10)
@@ -25,14 +26,11 @@ def list_events(venue_id=None):
         )
 
         if venue_id:
-            select_stmt = select_stmt.where(Venue.id == venue_id)
+            select_stmt = select_stmt.where(Event.venue_id == venue_id)
 
-        events = session.execute(select_stmt).all()
+        events = session.scalars(select_stmt).all()
 
-    return [
-        {"id": event.id, "name": event.name, "venue": {"name": venue.name}}
-        for event, venue in events
-    ]
+    return EventSerializer.serialize_many(events)
 
 
 @bp.get("/events/<int:event_id>")
@@ -43,4 +41,4 @@ def get_event(event_id):
         if event is None:
             return {"error": "Not found"}, 404
 
-        return {"id": event.id, "name": event.name, "venue_id": event.venue_id}
+        return EventSerializer.serialize(event)

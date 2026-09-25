@@ -23,12 +23,12 @@ def test_list_events_returns_upcoming_events_by_start_time(client):
         {
             "id": earlier_event.id,
             "name": "Earlier Event",
-            "venue": {"name": "Alpha Arena"},
+            "venue": {"id": venue.id, "name": "Alpha Arena"},
         },
         {
             "id": later_event.id,
             "name": "Later Event",
-            "venue": {"name": "Alpha Arena"},
+            "venue": {"id": venue.id, "name": "Alpha Arena"},
         },
     ]
 
@@ -46,7 +46,11 @@ def test_list_events_for_venue_returns_its_events(client):
 
     assert response.status_code == 200
     assert response.json == [
-        {"id": event.id, "name": "Concert", "venue": {"name": "Alpha Arena"}}
+        {
+            "id": event.id,
+            "name": "Concert",
+            "venue": {"id": venue.id, "name": "Alpha Arena"},
+        }
     ]
 
 
@@ -60,5 +64,5 @@ def test_get_event_returns_event(client):
     assert response.json == {
         "id": event.id,
         "name": "Concert",
-        "venue_id": venue.id,
+        "venue": {"id": venue.id, "name": venue.name},
     }

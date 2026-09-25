@@ -22,6 +22,7 @@ def test_list_ticket_types_returns_event_ticket_types(client):
     assert response.json == [
         {
             "id": ticket_type.id,
+            "event_id": event.id,
             "name": "General Admission",
             "price_cents": 1_500,
             "quantity": 10,
@@ -75,6 +76,7 @@ def test_get_ticket_hold_returns_current_users_hold(client):
     assert response.json["ticket_type_id"] == ticket_hold.ticket_type_id
     assert response.json["quantity"] == 2
     assert response.json["status"] == "active"
+    assert response.json["expires_at"] == ticket_hold.expires_at.isoformat()
 
 
 def test_get_ticket_hold_hides_another_users_hold(client):
