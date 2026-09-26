@@ -11,6 +11,7 @@ from app_logging import configure_logging
 from db import PrimarySession, ReplicaSession
 from events.models import Event
 from events.routes import bp as events_bp
+from schemas import RequestValidationError
 from tasks import broker
 from ticketing.models import TicketHold, TicketHoldStatus, TicketType
 from ticketing.routes import bp as ticketing_bp
@@ -53,6 +54,19 @@ def create_app():
     app.register_blueprint(venues_bp)
     app.register_blueprint(events_bp)
     app.register_blueprint(ticketing_bp)
+
+    @app.errorhandler(RequestValidationError)
+    def handle_request_validation_error(error):
+        return {
+            "error": "Validation failed",
+            "details": [
+                {
+                    "field": ".".join(str(value) for value in item["loc"]),
+                    "message": item["msg"],
+                }
+                for item in error.errors
+            ],
+        }, 422
 
     @app.before_request
     def set_current_user():

@@ -66,6 +66,24 @@ def test_create_ticket_hold_reserves_ticket_inventory(client, session):
     assert ticket_type.quantity == 1
 
 
+def test_create_ticket_hold_rejects_an_invalid_quantity(client):
+    ticket_type = TicketTypeFactory()
+
+    response = client.post(
+        f"/ticket-types/{ticket_type.id}/holds",
+        data={"quantity": 0},
+        headers=USER_HEADERS,
+    )
+
+    assert response.status_code == 422
+    assert response.json == {
+        "error": "Validation failed",
+        "details": [
+            {"field": "quantity", "message": "Input should be greater than 0"}
+        ],
+    }
+
+
 def test_get_ticket_hold_returns_current_users_hold(client):
     ticket_hold = TicketHoldFactory(user_id=1, quantity=2)
 

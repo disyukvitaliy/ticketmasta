@@ -4,12 +4,13 @@ from flask import Blueprint, g, request
 from sqlalchemy import func, select, update
 
 from db import PrimarySession, ReplicaSession
-from serializers import (
-    TicketHoldSerializer,
-    TicketTypeSerializer,
-)
 from tasks import send_ticket_email
 from ticketing.models import TicketHold, TicketHoldStatus, TicketType
+from ticketing.schemas import (
+    CreateTicketHoldRequest,
+    TicketHoldResponse,
+    TicketTypeResponse,
+)
 
 bp = Blueprint("ticketing", __name__)
 
@@ -21,7 +22,7 @@ def list_ticket_types(event_id):
             select(TicketType).where(TicketType.event_id == event_id)
         ).all()
 
-    return TicketTypeSerializer.serialize_many(ticket_types)
+    return TicketTypeResponse.serialize_many(ticket_types)
 
 
 @bp.get("/ticket-types/<int:ticket_type_id>")
@@ -32,15 +33,13 @@ def get_ticket_type(ticket_type_id):
         if ticket_type is None:
             return {"error": "Not found"}, 404
 
-        return TicketTypeSerializer.serialize(ticket_type)
+        return TicketTypeResponse.serialize(ticket_type)
 
 
 @bp.post("/ticket-types/<int:ticket_type_id>/holds")
 def create_ticket_hold(ticket_type_id):
-    quantity = request.form.get("quantity", type=int)
-
-    if quantity is None:
-        return {"error": "Quantity is required"}, 400
+    payload = CreateTicketHoldRequest.parse(request.form.to_dict())
+    quantity = payload.quantity
 
     with PrimarySession() as session:
         with session.begin():
@@ -79,7 +78,7 @@ def get_ticket_hold(ticket_hold_id):
         if ticket_hold is None:
             return {"error": "Not found"}, 404
 
-        return TicketHoldSerializer.serialize(ticket_hold)
+        return TicketHoldResponse.serialize(ticket_hold)
 
 
 @bp.delete("/ticket-holds/<int:ticket_hold_id>")
