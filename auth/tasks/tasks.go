@@ -67,7 +67,7 @@ func buildConfirmEmailMsg(email, token string) (*mail.Msg, error) {
 		return nil, err
 	}
 	msg.Subject("Confirm your email")
-	msg.SetBodyString(mail.TypeTextPlain, "Click here to confirm your email: http://localhost/confirm.html?token="+token)
+	msg.SetBodyString(mail.TypeTextPlain, "Click here to confirm your email: http://localhost/confirmation?token="+token)
 	return msg, nil
 }
 

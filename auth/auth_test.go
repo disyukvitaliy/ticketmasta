@@ -92,9 +92,11 @@ func createUser(t *testing.T, db *gorm.DB, email, password string) models.User {
 		t.Fatalf("hash could not be generated for the password %q", password)
 	}
 
+	confirmedAt := time.Now()
 	user := models.User{
 		Email:        email,
 		PasswordHash: string(hash),
+		ConfirmedAt:  &confirmedAt,
 	}
 
 	err = db.Create(&user).Error

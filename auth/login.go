@@ -1,6 +1,7 @@
 package main
 
 import (
+	"auth/logging"
 	"auth/models"
 	"encoding/json"
 	"errors"
@@ -18,6 +19,7 @@ type LoginRequest struct {
 }
 
 func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
+	logger := logging.LoggerFromContext(r.Context())
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "bad json", http.StatusBadRequest)
@@ -47,6 +49,12 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 
 	if bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(req.Password)) != nil {
 		http.Error(w, "invalid credentials", http.StatusUnauthorized)
+		logger.Warn("invalid credentials", "user_id", u.ID)
+		return
+	}
+
+	if u.ConfirmedAt == nil {
+		http.Error(w, "email not confirmed", http.StatusForbidden)
 		return
 	}
 

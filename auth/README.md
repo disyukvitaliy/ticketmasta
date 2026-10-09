@@ -42,7 +42,7 @@ docker compose --progress quiet -f docker-compose.yml -f test.docker-compose.yml
 
 ## TODO
 
-- Complete the email-confirmation flow: receive a confirmation token and persist that the user's email has been confirmed.
+- Let unconfirmed users resend a confirmation email after the original link expires.
 - Let users delete all of their active sessions.
 - Let users change their email address.
 - Add password-reset emails so users can set a new password.
