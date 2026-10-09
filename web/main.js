@@ -71,6 +71,7 @@ function registerPage() {
         confirm: '',
         terms: false,
         error: '',
+        registered: false,
 
         async submit() {
             const result = await fetch('http://api.localhost/auth/register', {
@@ -85,7 +86,11 @@ function registerPage() {
             });
 
             if (result.status === 201) {
-                window.location.href = '/login';
+                this.password = '';
+                this.confirm = '';
+                this.terms = false;
+                this.error = '';
+                this.registered = true;
                 return;
             }
 
@@ -106,18 +111,22 @@ function confirmPage() {
                 return;
             }
 
-            const result = await fetch('http://api.localhost/auth/confirm', {
+            const result = await fetch('http://api.localhost/auth/confirmation', {
                 method: 'POST',
                 body: token
             });
-            const message = await result.text();
 
-            if (!result.ok) {
-                this.status = `Confirmation failed: ${message || result.status}`;
+            if (result.status === 404) {
+                this.status = 'This confirmation link has expired or has already been used.';
                 return;
             }
 
-            this.status = message || 'Email confirmed.';
+            if (result.status !== 204) {
+                this.status = 'Something went wrong. Please try again later.';
+                return;
+            }
+
+            this.status = 'Email confirmed.';
             this.confirmed = true;
         }
     };

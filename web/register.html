@@ -10,7 +10,7 @@
 <body x-data="registerPage()">
     <main>
     <h1>Register</h1>
-    <form @submit.prevent="submit">
+    <form x-show="!registered" @submit.prevent="submit">
         <label for="reg-email">Email</label><br>
         <input id="reg-email" type="email" placeholder="you@example.com" autocomplete="email" x-model="email" required>
         <br>
@@ -27,6 +27,11 @@
         <button type="submit">Register</button>
     </form>
     <p x-show="error" x-text="error"></p>
+    <section x-show="registered">
+        <h2>Check your email</h2>
+        <p>We sent a confirmation link to <span x-text="email"></span>.</p>
+        <p>Open the link to confirm your account. It expires after 24 hours.</p>
+    </section>
     <p>
         <a href="/login">Already have an account? Login</a>
     </p>
