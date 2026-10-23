@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
@@ -34,7 +35,12 @@ func main() {
 	slog.Debug("GORM connected to Postgres successfully")
 	slog.Debug("Starting server on :3000")
 
-	srv := &Server{DB: gdb, Redis: redisClient, AsynqClient: asynqClient}
+	srv := &Server{
+		DB:                      gdb,
+		Redis:                   redisClient,
+		AsynqClient:             asynqClient,
+		ConfirmationSendLimiter: NewKeyedRateLimiter(time.Minute),
+	}
 	if err := http.ListenAndServe(":3000", newHandler(srv)); err != nil {
 		slog.Error("http server error", "err", err)
 	}

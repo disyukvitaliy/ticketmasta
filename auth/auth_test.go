@@ -66,7 +66,11 @@ func newTestApp(t *testing.T) *testApp {
 	taskClient := &fakeTaskClient{}
 
 	return &testApp{
-		Handler:    newHandler(&Server{DB: tx, AsynqClient: taskClient}),
+		Handler: newHandler(&Server{
+			DB:                      tx,
+			AsynqClient:             taskClient,
+			ConfirmationSendLimiter: NewKeyedRateLimiter(time.Minute),
+		}),
 		DB:         tx,
 		TaskClient: taskClient,
 	}

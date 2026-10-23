@@ -7,6 +7,7 @@ require (
 	github.com/hibiken/asynq v0.26.0
 	github.com/wneessen/go-mail v0.7.3
 	golang.org/x/crypto v0.43.0
+	golang.org/x/time v0.14.0
 	gorm.io/driver/postgres v1.5.11
 	gorm.io/gorm v1.25.11
 )
@@ -27,6 +28,5 @@ require (
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
-	golang.org/x/time v0.14.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 )

@@ -19,6 +19,11 @@ func (s *Server) ResendConfirmation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	email := strings.TrimSpace(strings.ToLower(string(emailBytes)))
+	if !s.ConfirmationSendLimiter.Allow(email) {
+		logger.Warn("confirmation resend rate limit reached")
+		w.WriteHeader(http.StatusAccepted)
+		return
+	}
 
 	var count int64
 	err = s.DB.Model(&models.User{}).Where("confirmed_at IS NULL AND email = ?", email).Count(&count).Error

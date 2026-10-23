@@ -11,7 +11,8 @@ type TaskClient interface {
 }
 
 type Server struct {
-	DB          *gorm.DB
-	Redis       *redis.Client
-	AsynqClient TaskClient
+	DB                      *gorm.DB
+	Redis                   *redis.Client
+	AsynqClient             TaskClient
+	ConfirmationSendLimiter *KeyedRateLimiter
 }

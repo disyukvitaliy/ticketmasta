@@ -40,9 +40,21 @@ docker compose --progress quiet -f docker-compose.yml -f test.docker-compose.yml
 ./ape auth test
 ```
 
+## Decisions
+
+### Confirmation email resend rate limiting
+
+Auth limits confirmation email resends to one per normalized email address per
+minute using an in-memory keyed rate limiter. Each Auth instance tracks its own
+limits. If Auth runs multiple instances, use a distributed rate limiter so they
+share the same limit.
+
+The limiter is stored on `Server` so all requests share the same state. This is
+simple with one limiter, but adding a separate field for every limited action
+would clutter `Server`; group them under a limiter dependency if more are added.
+
 ## TODO
 
-- Let unconfirmed users resend a confirmation email after the original link expires.
 - Let users delete all of their active sessions.
 - Let users change their email address.
 - Add password-reset emails so users can set a new password.
