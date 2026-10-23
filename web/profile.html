@@ -7,13 +7,11 @@
     <script defer src="/main.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body x-data="profilePage()" x-init="load()">
+<body x-data="profilePage()">
     <main>
-    <h1>This is your Ticketmasta profile</h1>
+    <h1>Account</h1>
     <a href="/">Back</a><br>
     <button @click="logout">Logout</button>
-    <p x-show="error" x-text="error"></p>
-    <div x-text="profile"></div>
     </main>
 </body>
 </html>

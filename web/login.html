@@ -20,6 +20,10 @@
         <button type="submit">Login</button>
     </form>
     <p x-show="error" x-text="error"></p>
+    <button type="button" x-show="canResendConfirmation" @click="resendConfirmation" :disabled="resendingConfirmation">
+        Resend confirmation email
+    </button>
+    <p x-show="resendMessage" x-text="resendMessage"></p>
     <p>
         <a href="/">Back</a>
     </p>

@@ -43,8 +43,14 @@ function loginPage() {
         email: '',
         password: '',
         error: '',
+        canResendConfirmation: false,
+        resendingConfirmation: false,
+        resendMessage: '',
 
         async submit() {
+            this.canResendConfirmation = false;
+            this.resendMessage = '';
+
             const result = await fetch('http://api.localhost/auth/login', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -52,6 +58,12 @@ function loginPage() {
             });
 
             if (!result.ok) {
+                if (result.status === 403) {
+                    this.error = 'Your email has not been confirmed.';
+                    this.canResendConfirmation = true;
+                    return;
+                }
+
                 this.error = `Login failed: ${await result.text()}`;
                 return;
             }
@@ -60,6 +72,26 @@ function loginPage() {
             localStorage.setItem('access-token', accessToken);
             localStorage.setItem('refresh-token', refreshToken);
             window.location.href = '/';
+        },
+
+        async resendConfirmation() {
+            this.resendingConfirmation = true;
+            this.resendMessage = '';
+
+            const result = await fetch('http://api.localhost/auth/confirmation/resend', {
+                method: 'POST',
+                body: this.email.trim()
+            });
+
+            this.resendingConfirmation = false;
+
+            if (result.status === 202) {
+                this.resendMessage = 'If your account needs confirmation, we will send a new link.';
+                this.canResendConfirmation = false;
+                return;
+            }
+
+            this.resendMessage = 'Could not request a confirmation email. Please try again later.';
         }
     };
 }
@@ -134,19 +166,6 @@ function confirmPage() {
 
 function profilePage() {
     return {
-        profile: '',
-        error: '',
-
-        async load() {
-            const result = await apiFetch('/core/profile');
-            if (!result.ok) {
-                this.error = `Could not load profile: ${result.status}`;
-                return;
-            }
-
-            this.profile = await result.text();
-        },
-
         async logout() {
             const refreshToken = localStorage.getItem('refresh-token');
             if (refreshToken) {
