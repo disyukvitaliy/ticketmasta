@@ -1,7 +1,6 @@
 package main
 
 import (
-	"auth/logging"
 	"auth/models"
 	"auth/tasks"
 	"encoding/json"
@@ -71,13 +70,7 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	info, err := s.AsynqClient.Enqueue(tasks.NewConfirmEmailTask(u.Email))
-	logger := logging.LoggerFromContext(r.Context())
-	if err != nil {
-		logger.Error("could not enqueue task", "error", err)
-	} else {
-		logger.Info("enqueued task", "id", info.ID, "queue", info.Queue)
-	}
+	_ = s.enqueueTask(r.Context(), tasks.NewConfirmEmailTask(u.Email))
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusCreated)
