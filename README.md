@@ -6,6 +6,9 @@ To run the app use `./ape up`
 
 - [Auth](auth/README.md)
 - [Core](core/README.md)
+- [Analytics](analytics/README.md) (planned)
+- [Recommendations](recommendations/README.md) (planned)
+- [Search](search/README.md) (planned)
 
 ## Decisions
 
