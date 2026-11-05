@@ -57,9 +57,11 @@ services:
     depends_on:
       - auth_db
       - redis
+      - kafka
     environment:
       AUTH_JWT_SECRET: your-very-secret-key
       AUTH_REDIS_ADDR: redis:6379
+      AUTH_KAFKA_ADDR: kafka:19092
       GOOSE_DRIVER: postgres
       GOOSE_MIGRATION_DIR: ./migrations
       LOG_LEVEL: debug

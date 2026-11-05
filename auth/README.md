@@ -42,6 +42,18 @@ docker compose --progress quiet -f docker-compose.yml -f test.docker-compose.yml
 
 ## Decisions
 
+### Kafka publishing
+
+Publishing is currently not transactional with database writes. A user can be
+created successfully without the corresponding event reaching `auth.users`,
+leaving other services out of sync. Publish failures are logged, but failed events
+are not saved for later delivery.
+
+We need to consider the transactional outbox pattern so every committed user
+creation is eventually reflected in Kafka. The user and an outgoing event would
+be saved in the same database transaction, with a separate publisher retrying
+delivery to Kafka.
+
 ### Confirmation email resend rate limiting
 
 Auth limits confirmation email resends to one per normalized email address per
@@ -59,4 +71,3 @@ would clutter `Server`; group them under a limiter dependency if more are added.
 - Let users change their email address.
 - Add password-reset emails so users can set a new password.
 - Add an account/session list and let users log out other devices while keeping the current session.
-- Publish a user-signup event to Kafka.

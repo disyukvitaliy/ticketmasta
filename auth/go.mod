@@ -5,6 +5,8 @@ go 1.26.4
 require (
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/hibiken/asynq v0.26.0
+	github.com/redis/go-redis/v9 v9.14.1
+	github.com/segmentio/kafka-go v0.4.51
 	github.com/wneessen/go-mail v0.7.3
 	golang.org/x/crypto v0.43.0
 	golang.org/x/time v0.14.0
@@ -22,7 +24,8 @@ require (
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
-	github.com/redis/go-redis/v9 v9.14.1 // indirect
+	github.com/klauspost/compress v1.15.9 // indirect
+	github.com/pierrec/lz4/v4 v4.1.15 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect

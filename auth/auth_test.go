@@ -3,6 +3,7 @@ package main
 import (
 	dbpkg "auth/db"
 	"auth/models"
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -69,11 +70,22 @@ func newTestApp(t *testing.T) *testApp {
 		Handler: newHandler(&Server{
 			DB:                      tx,
 			AsynqClient:             taskClient,
+			Events:                  fakeEventPublisher{},
 			ConfirmationSendLimiter: NewKeyedRateLimiter(time.Minute),
 		}),
 		DB:         tx,
 		TaskClient: taskClient,
 	}
+}
+
+type fakeEventPublisher struct{}
+
+func (fakeEventPublisher) UserRegistered(context.Context, *models.User) error {
+	return nil
+}
+
+func (fakeEventPublisher) UserConfirmed(context.Context, *models.User) error {
+	return nil
 }
 
 type fakeTaskClient struct {

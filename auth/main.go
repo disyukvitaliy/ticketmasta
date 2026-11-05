@@ -9,6 +9,7 @@ import (
 
 	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
+	"github.com/segmentio/kafka-go"
 
 	dbpkg "auth/db"
 )
@@ -32,6 +33,15 @@ func main() {
 
 	defer redisClient.Close()
 
+	kafkaWriter := &kafka.Writer{
+		Addr:                   kafka.TCP(os.Getenv("AUTH_KAFKA_ADDR")),
+		Balancer:               &kafka.Hash{},
+		RequiredAcks:           kafka.RequireAll,
+		BatchTimeout:           10 * time.Millisecond,
+		AllowAutoTopicCreation: true,
+	}
+	defer kafkaWriter.Close()
+
 	slog.Debug("GORM connected to Postgres successfully")
 	slog.Debug("Starting server on :3000")
 
@@ -39,6 +49,7 @@ func main() {
 		DB:                      gdb,
 		Redis:                   redisClient,
 		AsynqClient:             asynqClient,
+		Events:                  &EventPublisher{Writer: kafkaWriter},
 		ConfirmationSendLimiter: NewKeyedRateLimiter(time.Minute),
 	}
 	if err := http.ListenAndServe(":3000", newHandler(srv)); err != nil {

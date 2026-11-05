@@ -1,6 +1,7 @@
 package main
 
 import (
+	"auth/logging"
 	"auth/models"
 	"auth/tasks"
 	"encoding/json"
@@ -68,6 +69,10 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 		}
 		http.Error(w, "db error", http.StatusInternalServerError)
 		return
+	}
+
+	if err := s.Events.UserRegistered(r.Context(), &u); err != nil {
+		logging.LoggerFromContext(r.Context()).Error("could not publish user registration", "user_id", u.ID, "error", err)
 	}
 
 	_ = s.enqueueTask(r.Context(), tasks.NewConfirmEmailTask(u.Email))

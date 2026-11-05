@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm/clause"
 )
 
 func (s *Server) Confirm(w http.ResponseWriter, r *http.Request) {
@@ -30,8 +31,10 @@ func (s *Server) Confirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var user models.User
 	result := s.DB.
-		Model(&models.User{}).
+		Model(&user).
+		Clauses(clause.Returning{}).
 		Where("email = ?", email).
 		Where("confirmed_at IS NULL").
 		Update("confirmed_at", time.Now())
@@ -42,10 +45,16 @@ func (s *Server) Confirm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if result.RowsAffected == 0 {
+		logger.Warn("no unconfirmed user found")
 		http.NotFound(w, r)
 		return
 	}
 
 	s.Redis.Del(r.Context(), "confirm:"+confirmationToken)
+
+	if err := s.Events.UserConfirmed(r.Context(), &user); err != nil {
+		logger.Error("could not publish user confirmation", "user_id", user.ID, "error", err)
+	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
