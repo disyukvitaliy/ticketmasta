@@ -10,6 +10,10 @@ To run the app use `./ape up`
 - [Recommendations](recommendations/README.md) (planned)
 - [Search](search/README.md) (planned)
 
+## End-to-end tests
+
+See [E2E setup and running instructions](e2e/README.md).
+
 ## Decisions
 
 ### Browser token storage
