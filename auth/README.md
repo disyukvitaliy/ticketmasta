@@ -67,6 +67,7 @@ would clutter `Server`; group them under a limiter dependency if more are added.
 
 ## TODO
 
+- Add an endpoint for retrieving current account details, including the account email.
 - Let users delete all of their active sessions.
 - Let users change their email address.
 - Add password-reset emails so users can set a new password.

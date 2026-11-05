@@ -65,6 +65,11 @@ Start a shell with the application loaded:
 
 ## Decisions
 
+### Logging
+
+We use standard Python logging with `extra` for structured fields. This syntax is
+cumbersome; we should consider a simpler logging API in the future.
+
 ### Worker
 
 We use Dramatiq with Redis for background jobs such as ticket emails and hold

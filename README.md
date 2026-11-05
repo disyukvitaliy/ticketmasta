@@ -12,6 +12,12 @@ To run the app use `./ape up`
 
 ## Decisions
 
+### Browser token storage
+
+The frontend currently stores access and refresh tokens in `localStorage`.
+Before production, we should consider `HttpOnly`, `Secure` cookies to reduce
+token theft through XSS, together with appropriate CSRF protection.
+
 ### Ticket holds and inventory locking
 
 Creating a ticket hold locks its ticket type with `SELECT ... FOR UPDATE`, then
