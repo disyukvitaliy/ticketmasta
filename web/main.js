@@ -166,6 +166,56 @@ function confirmPage() {
 
 function profilePage() {
     return {
+        profile: null,
+        status: 'Loading...',
+        loading: false,
+
+        async init() {
+            if (!localStorage.getItem('access-token')) {
+                window.location.href = '/login';
+                return;
+            }
+
+            await this.load();
+        },
+
+        async load() {
+            this.loading = true;
+            this.status = 'Loading...';
+
+            try {
+                for (let attempt = 0; attempt < 5; attempt++) {
+                    const result = await apiFetch('/core/profile');
+                    if (result.status === 401) {
+                        window.location.href = '/login';
+                        return;
+                    }
+
+                    if (result.ok) {
+                        this.profile = await result.json();
+                        this.status = '';
+                        return;
+                    }
+
+                    if (result.status !== 404) {
+                        this.status = 'Could not load your profile. Please try again.';
+                        return;
+                    }
+
+                    this.status = 'We are setting up your profile. Please wait a moment.';
+                    if (attempt < 4) {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+
+                this.status = 'Your profile is taking longer to prepare. Please try again shortly.';
+            } catch {
+                this.status = 'Could not load your profile. Please try again.';
+            } finally {
+                this.loading = false;
+            }
+        },
+
         async logout() {
             const refreshToken = localStorage.getItem('refresh-token');
             if (refreshToken) {

@@ -3,15 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ticketmasta</title>
+    <title>Profile | Ticketmasta</title>
     <script defer src="/main.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body x-data="profilePage()">
     <main>
-    <h1>Account</h1>
-    <a href="/">Back</a><br>
-    <button @click="logout">Logout</button>
+        <h1>Profile</h1>
+        <p x-show="status" x-text="status" role="status"></p>
+        <template x-if="profile">
+            <section aria-label="Profile details">
+                <p>Profile ID: <span x-text="profile.id"></span></p>
+                <p>
+                    <label for="notification-email">Notification email</label><br>
+                    <input id="notification-email" type="email" :value="profile.email ?? ''" placeholder="Not set" readonly>
+                </p>
+                <p>
+                    <label for="first-name">First name</label><br>
+                    <input id="first-name" type="text" :value="profile.first_name ?? ''" placeholder="Not set" readonly>
+                </p>
+                <p>
+                    <label for="last-name">Last name</label><br>
+                    <input id="last-name" type="text" :value="profile.last_name ?? ''" placeholder="Not set" readonly>
+                </p>
+            </section>
+        </template>
+        <button type="button" x-show="status && !loading" @click="load" :disabled="loading">Try again</button>
+        <p><a href="/">Back</a></p>
+        <button type="button" @click="logout">Logout</button>
     </main>
 </body>
 </html>
