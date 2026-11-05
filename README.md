@@ -56,6 +56,13 @@ can be best-effort. Ticket delivery is different: before it becomes the way a
 customer receives a ticket, it should use a durable outbox or similar pattern
 so the ticket is not lost between saving the purchase and queuing the job.
 
+### Kafka cluster
+
+Locally, Kafka runs on a single node to keep development simple. One broker can
+host multiple partitions, but cannot replicate them across nodes. In production,
+we will use multiple brokers to distribute partitions and their workload, and
+replicate partitions across brokers for fault tolerance and availability.
+
 ### Test coverage
 
 Core tests cover the main endpoint flows and important ticket-hold behavior.
