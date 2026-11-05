@@ -1,0 +1,1 @@
+"""Profile catalogue domain."""

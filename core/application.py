@@ -11,6 +11,7 @@ from app_logging import configure_logging
 from db import PrimarySession, ReplicaSession
 from events.models import Event
 from events.routes import bp as events_bp
+from profiles.routes import bp as profiles_bp
 from schemas import RequestValidationError
 from tasks import broker
 from ticketing.models import TicketHold, TicketHoldStatus, TicketType
@@ -54,6 +55,7 @@ def create_app():
     app.register_blueprint(venues_bp)
     app.register_blueprint(events_bp)
     app.register_blueprint(ticketing_bp)
+    app.register_blueprint(profiles_bp)
 
     @app.errorhandler(RequestValidationError)
     def handle_request_validation_error(error):
