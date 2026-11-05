@@ -13,9 +13,10 @@ PrimarySession = sessionmaker()
 ReplicaSession = sessionmaker()
 
 
-def configure_sessions(primary_bind, replica_bind, **options):
+def configure_sessions(primary_bind, replica_bind=None, **options):
     PrimarySession.configure(bind=primary_bind, **options)
-    ReplicaSession.configure(bind=replica_bind, **options)
+    if replica_bind is not None:
+        ReplicaSession.configure(bind=replica_bind, **options)
 
 
 class SqlAlchemyMessageFilter(logging.Filter):

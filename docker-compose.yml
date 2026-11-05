@@ -47,6 +47,20 @@ services:
       CORE_REDIS_URL: redis://redis:6379/1
     depends_on:
       - redis
+  core_consumer:
+    build:
+      context: ./core
+      dockerfile: Dockerfile
+    command: ["faststream", "run", "profiles.consumer:app", "--workers", "1"]
+    volumes:
+      - ./core:/app
+    environment:
+      CORE_KAFKA_ADDR: kafka:19092
+      CORE_USER_EVENT_CONCURRENCY: 3
+      CORE_DB_DSN: postgresql+psycopg://core:core@core_db:5432/core
+    depends_on:
+      - kafka
+      - core_db
   auth:
     build:
       context: ./auth

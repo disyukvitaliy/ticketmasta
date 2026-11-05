@@ -63,11 +63,35 @@ Start a shell with the application loaded:
 ./ape core sh
 ```
 
-## Background jobs
+## Decisions
 
-`core_worker` consumes Redis-backed jobs. Completing a ticket hold enqueues an
-email task, which the worker sends through Mailpit. Open Mailpit at
-http://localhost:8025.
+### Worker
+
+We use Dramatiq with Redis for background jobs such as ticket emails and hold
+expiration. It provides task queues, retries, and configurable process and thread
+counts while keeping handlers synchronous.
+
+### Consumer
+
+We chose FastStream with its aiokafka backend to run multiple processes, each
+using threads for efficient concurrent partition processing. Synchronous handlers
+can overlap database I/O while preserving order within each partition. Topics can
+be deployed independently with different process counts and concurrency settings.
+Messages are handled individually for now; batch processing is available for
+future efficiency improvements.
+
+Message schema validation, custom error handling, retry limits and backoff, and
+dead-letter queues (DLQs) are deferred. For now, failed messages are retried through
+FastStream's `NACK_ON_ERROR` policy.
+
+### Profile creation
+
+Core creates profiles asynchronously on user creation, before confirmation gives
+the user access to the system. This provides a window to prepare the profile,
+but does not guarantee it will be ready in time. A user may briefly exist
+without a profile while the creation event is waiting to be processed. We need
+monitoring to detect these gaps, distinguish normal delays from missing events
+or processing failures, and trigger recovery when needed.
 
 ## TODO
 

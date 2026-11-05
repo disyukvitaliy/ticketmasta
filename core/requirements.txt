@@ -6,5 +6,6 @@ psycopg[binary]==3.3.4
 ruff==0.15.22
 dramatiq[redis]==2.2.0
 APScheduler==3.11.3
+faststream[kafka,cli]==0.7.8
 pytest==9.0.2
 factory-boy==3.3.3
