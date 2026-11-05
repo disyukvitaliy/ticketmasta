@@ -12,8 +12,8 @@ availability, and ticket purchases.
 - **Kafka** — carries events published directly by applications when users save,
   unsave, or review events, alongside relevant activity from other services.
 - **ClickHouse** — the analytics platform ingests these events through its Kafka
-  integration. Background jobs use the analytical data to calculate similarities
-  and recommendation scores with SQL, without training machine learning models.
+  integration. Background jobs query the analytical data to prepare training
+  datasets and generate recommendations.
 
 ## Data flow
 
@@ -31,15 +31,18 @@ Other services → Kafka → ClickHouse
 
 ## Recommendation approach
 
-Background jobs periodically analyze user interests and activity in ClickHouse
-to find similarities and generate recommendations. Results are stored in
-PostgreSQL for the API to serve without repeating the analysis on each request.
-The exact algorithms will be decided during implementation.
+We will likely use **PyTorch** or **LightFM** to train a simple recommendation
+model using user interactions and event attributes. Background jobs periodically
+train the model and generate recommendations from data prepared in ClickHouse.
+Results are stored in PostgreSQL for the API to serve without repeating the
+computation on each request. The library and exact algorithms will be decided
+during implementation.
 
 ## Local development
 
 The service, PostgreSQL, Kafka, and ClickHouse can run locally in Docker Compose.
-This folder will own the API, transactional schemas, and background SQL jobs;
-the analytics platform owns ClickHouse ingestion and analytical schemas.
+This folder will own the API, transactional schemas, and background training and
+recommendation jobs. The analytics platform owns ClickHouse ingestion and
+analytical schemas.
 
 This README describes the intended architecture; implementation is not added yet.
