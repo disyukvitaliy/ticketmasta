@@ -6,11 +6,12 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 from db import Base
 from events.models import Event
+from profiles.models import Profile
 from ticketing.models import TicketHold, TicketType
 from venues.models import Venue
 
 # Import every domain model so Alembic can discover its table metadata.
-domain_models = (Event, TicketHold, TicketType, Venue)
+domain_models = (Event, Profile, TicketHold, TicketType, Venue)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
