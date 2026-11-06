@@ -16,6 +16,20 @@ services:
       - core_db
       - core_db_replica
       - redis
+  admin:
+    build:
+      context: ./core
+      dockerfile: Dockerfile
+    command: ["flask", "--app", "backoffice.app", "run", "--host=0.0.0.0", "--debug"]
+    stop_signal: SIGINT
+    volumes:
+      - ./core:/app
+    environment:
+      CORE_DB_DSN: postgresql+psycopg://core:core@core_db:5432/core
+      ADMIN_SECRET_KEY: local-development-admin-session-key
+      ADMIN_PASSWORD_SALT: local-development-admin-password-salt
+    depends_on:
+      - core_db
   core_worker:
     build:
       context: ./core

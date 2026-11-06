@@ -63,6 +63,11 @@ Start a shell with the application loaded:
 ./ape core sh
 ```
 
+## Backoffice
+
+The backoffice is a simple tool for creating and editing events. Keep it minimal;
+developing the admin interface is outside this project's learning scope.
+
 ## Decisions
 
 ### Logging

@@ -1,4 +1,7 @@
 Flask==3.1.2
+# 2.2.1 imports Flask-SQLAlchemy unconditionally; Core uses plain SQLAlchemy.
+Flask-Admin==2.0.2
+Flask-Security[common]==5.9.2
 pydantic==2.13.5
 SQLAlchemy==2.0.51
 alembic==1.18.5

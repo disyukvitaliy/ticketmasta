@@ -36,6 +36,15 @@ static_resources:
                       routes:
                         - match: { prefix: "/" }
                           route: { cluster: web_service }
+                    - name: backoffice
+                      domains: ["admin.localhost"]
+                      typed_per_filter_config:
+                        envoy.filters.http.jwt_authn:
+                          '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
+                          disabled: true
+                      routes:
+                        - match: { prefix: "/" }
+                          route: { cluster: admin_service }
                     - name: api
                       domains: ["api.localhost"]
                       typed_per_filter_config:
@@ -101,6 +110,19 @@ static_resources:
                     socket_address:
                       address: web
                       port_value: 80
+    - name: admin_service
+      connect_timeout: 0.25s
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: admin_service
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: admin
+                      port_value: 5000
     - name: core_service
       connect_timeout: 0.25s
       type: STRICT_DNS
