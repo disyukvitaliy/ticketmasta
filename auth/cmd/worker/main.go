@@ -1,6 +1,7 @@
 package main
 
 import (
+	dbpkg "auth/db"
 	"auth/logging"
 	"auth/tasks"
 	"context"
@@ -17,6 +18,7 @@ func main() {
 	srv := asynq.NewServer(
 		asynq.RedisClientOpt{Addr: os.Getenv("AUTH_REDIS_ADDR")},
 		asynq.Config{
+			Logger:      logging.AsynqLogger{},
 			Concurrency: 2,
 			Queues: map[string]int{
 				"critical": 6,
@@ -26,6 +28,13 @@ func main() {
 		},
 	)
 
+	gdb, closer, err := dbpkg.Open(os.Getenv("AUTH_DB_DSN"))
+	if err != nil {
+		slog.Error("failed to open GORM DB", "err", err)
+		os.Exit(1)
+	}
+	defer closer()
+
 	redisClient := redis.NewClient(&redis.Options{
 		Addr: os.Getenv("AUTH_REDIS_ADDR"),
 	})
@@ -33,12 +42,14 @@ func main() {
 	defer redisClient.Close()
 
 	taskHandler := tasks.TaskHandler{
+		DB:    gdb,
 		Redis: redisClient,
 	}
 
 	mux := asynq.NewServeMux()
 	mux.Use(taskLoggerMiddleware)
 	mux.HandleFunc(tasks.ConfirmEmailTask, taskHandler.HandleConfirmEmail)
+	mux.HandleFunc(tasks.WarnUnconfirmedUsersTask, taskHandler.HandleWarnUnconfirmedUsers)
 
 	if err := srv.Run(mux); err != nil {
 		slog.Error("could not run server", "error", err)

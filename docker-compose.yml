@@ -103,11 +103,25 @@ services:
     volumes:
       - ./auth:/app
     depends_on:
+      - auth_db
       - redis
     environment:
+      AUTH_DB_DSN: postgres://auth:auth@auth_db:5432/auth?sslmode=disable
       AUTH_REDIS_ADDR: redis:6379
       AUTH_SMTP_HOST: mailpit
       AUTH_SMTP_PORT: 1025
+      LOG_LEVEL: debug
+  auth_scheduler:
+    build:
+      context: ./auth
+      dockerfile: Dockerfile
+    command: go run ./cmd/scheduler
+    volumes:
+      - ./auth:/app
+    depends_on:
+      - redis
+    environment:
+      AUTH_REDIS_ADDR: redis:6379
       LOG_LEVEL: debug
   web:
     image: nginx:latest

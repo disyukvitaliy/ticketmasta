@@ -42,6 +42,22 @@ docker compose --progress quiet -f docker-compose.yml -f test.docker-compose.yml
 
 ## Decisions
 
+### Unconfirmed account warning retries
+
+Failed sends are logged without retries; retrying after partial delivery could
+send duplicates. Setup errors still trigger Asynq retries.
+
+The date window uses current UTC time, so retries after midnight can select
+different users. We could attach an enqueue timestamp as scheduler metadata
+(other tasks can ignore it), or save the first attempt's date in Redis.
+
+We prefer to avoid a `warn_sent_at` column on `users` for a one-time notification.
+Instead, Redis could track successful sends under `warn:<task_id>:<user_id>` so
+retries skip them. Task IDs survive retries; the TTL must cover the retry window
+and queue delays. Lost markers or a crash after sending can still cause duplicates.
+If deletion requires a successful warning, consider a durable notification table.
+These improvements are deferred.
+
 ### Kafka publishing
 
 Publishing is currently not transactional with database writes. A user can be
