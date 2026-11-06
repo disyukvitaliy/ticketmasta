@@ -18,3 +18,12 @@ With the development environment running and migrations applied, from this direc
 npm test
 npm test -- --headed # Show the browser
 ```
+
+## Simulate traffic
+
+Repeat the user journey to generate simple traffic. Workers control concurrency;
+each run creates a new account.
+
+```sh
+npm test -- --repeat-each=20 --workers=1
+```
