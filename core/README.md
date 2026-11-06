@@ -70,6 +70,18 @@ developing the admin interface is outside this project's learning scope.
 
 ## Decisions
 
+### SQLAlchemy integration
+
+We use plain SQLAlchemy for now. Flask-SQLAlchemy simplifies Flask's engine and
+session setup, but its session requires a Flask application context. Using it
+directly in shared services would also make workers and consumers depend on that
+context.
+
+We need to revisit session and transaction ownership across Flask apps, workers,
+and consumers. Passing sessions into shared services could let us use
+Flask-SQLAlchemy in the web apps while keeping business logic independent of Flask;
+we have not decided whether that integration is worth adopting.
+
 ### Logging
 
 We use standard Python logging with `extra` for structured fields. This syntax is
