@@ -7,13 +7,14 @@ import (
 	"time"
 
 	"github.com/hibiken/asynq"
-	"github.com/wneessen/go-mail"
+	"github.com/knadh/smtppool/v2"
+	"golang.org/x/sync/errgroup"
 )
 
 const WarnUnconfirmedUsersTask = "users:warn_unconfirmed"
 
 func NewWarnUnconfirmedUsersTask() *asynq.Task {
-	return asynq.NewTask(WarnUnconfirmedUsersTask, nil)
+	return asynq.NewTask(WarnUnconfirmedUsersTask, nil, asynq.Queue("low"))
 }
 
 func (h *TaskHandler) HandleWarnUnconfirmedUsers(ctx context.Context, t *asynq.Task) error {
@@ -31,45 +32,26 @@ func (h *TaskHandler) HandleWarnUnconfirmedUsers(ctx context.Context, t *asynq.T
 		return err
 	}
 
-	client, err := newMailClient()
-	if err != nil {
-		return err
-	}
-
-	if err := client.DialWithContext(ctx); err != nil {
-		return err
-	}
-
-	defer client.Close()
-
 	logger := logging.LoggerFromContext(ctx)
+	var workers errgroup.Group
+	workers.SetLimit(3)
 
 	for _, user := range users {
-		if err := sendWarningEmail(client, user.Email); err != nil {
-			logger.Error("Could not send account deletion warning email", "error", err, "user_id", user.ID)
-		}
+		workers.Go(func() error {
+			if err := h.Mail.Send(buildWarningEmailMsg(user.Email)); err != nil {
+				logger.Error("Could not send account deletion warning email", "error", err, "user_id", user.ID)
+			}
+			return nil
+		})
 	}
-
-	return nil
+	return workers.Wait()
 }
 
-func sendWarningEmail(client *mail.Client, email string) error {
-	msg, err := buildWarningEmailMsg(email)
-	if err != nil {
-		return err
+func buildWarningEmailMsg(email string) smtppool.Email {
+	return smtppool.Email{
+		From:    "no-reply@example.com",
+		To:      []string{email},
+		Subject: "We will destroy you",
+		Text:    []byte("Hello! Your account is still awaiting confirmation and will be deleted in one month. We’d love for you to stay.\n\nPlease confirm your account. Or else."),
 	}
-	return client.Send(msg)
-}
-
-func buildWarningEmailMsg(email string) (*mail.Msg, error) {
-	msg := mail.NewMsg()
-	if err := msg.From("no-reply@example.com"); err != nil {
-		return nil, err
-	}
-	if err := msg.To(email); err != nil {
-		return nil, err
-	}
-	msg.Subject("We will destroy you")
-	msg.SetBodyString(mail.TypeTextPlain, "Hello! Your account is still awaiting confirmation and will be deleted in one month. We’d love for you to stay.\n\nPlease confirm your account. Or else.")
-	return msg, nil
 }

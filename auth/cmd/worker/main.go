@@ -41,9 +41,17 @@ func main() {
 
 	defer redisClient.Close()
 
+	mailPool, err := tasks.NewMailPool()
+	if err != nil {
+		slog.Error("could not create SMTP pool", "error", err)
+		os.Exit(1)
+	}
+	defer mailPool.Close()
+
 	taskHandler := tasks.TaskHandler{
 		DB:    gdb,
 		Redis: redisClient,
+		Mail:  mailPool,
 	}
 
 	mux := asynq.NewServeMux()

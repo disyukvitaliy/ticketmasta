@@ -44,8 +44,10 @@ docker compose --progress quiet -f docker-compose.yml -f test.docker-compose.yml
 
 ### Unconfirmed account warning retries
 
-Failed sends are logged without retries; retrying after partial delivery could
-send duplicates. Setup errors still trigger Asynq retries.
+The SMTP pool makes up to three attempts for retryable send failures, one second
+apart. Remaining failures are logged without retrying the whole warning task;
+doing so after partial delivery could send duplicates. Database errors still
+trigger Asynq retries.
 
 The date window uses current UTC time, so retries after midnight can select
 different users. We could attach an enqueue timestamp as scheduler metadata
